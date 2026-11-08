@@ -1,0 +1,89 @@
+name: Admin checks
+
+# This repository had no workflow at all: nothing type-checked, linted or built
+# the backoffice between a pull request and a deployment. A type error that
+# tsc would catch in two seconds reached review as a reader's problem instead.
+#
+# Node 20, the version the Dockerfile ships, so a green run means the three
+# commands pass against what production builds.
+
+# Runs when the back office changes (the repository also holds the bot and the
+# API).
+on:
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - 'admin/**'
+      - '.github/workflows/admin-checks.yml'
+  push:
+    branches: [develop, main]
+    paths:
+      - 'admin/**'
+      - '.github/workflows/admin-checks.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A second push to the same branch makes the first run pointless.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: admin
+
+jobs:
+  checks:
+    name: types, lint, tests, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: admin/package-lock.json
+
+      - name: Install from the lockfile
+        # npm ci, not npm install: it fails when package.json and the lockfile
+        # disagree, instead of quietly resolving something else than review saw.
+        run: npm ci
+
+      - name: Types
+        run: npm run typecheck
+
+      - name: Lint
+        # Zero warnings. A warning nobody has to clear accumulates until the
+        # output is noise and a real one goes unread.
+        run: npm run lint -- --max-warnings=0
+
+      - name: Unit tests and coverage
+        # Vitest over src/, pages included (vitest.config.mts): the figure is
+        # the share of the whole back office, and below 15 % the job fails.
+        run: npm run test:coverage
+
+      - name: Coverage in the run summary
+        if: always()
+        run: |
+          node -e '
+            const t = require("./coverage/coverage-summary.json").total;
+            const row = (k) => `| ${k} | ${t[k].covered} / ${t[k].total} | ${t[k].pct} % |`;
+            console.log(["### Back office coverage", "", "| | covered | % |", "| --- | --- | --- |",
+              row("statements"), row("branches"), row("functions"), row("lines")].join("\n"));
+          ' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the coverage report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: admin-coverage
+          path: admin/coverage/
+          retention-days: 90
+
+      - name: Build
+        # The build is the only check that exercises the server components and
+        # the route tree; tsc and eslint both pass on a page that cannot render.
+        run: npm run build

@@ -1,0 +1,13 @@
+.venv
+__pycache__
+*.pyc
+.git
+.env*
+!.env.example
+docs
+server*.log
+test_*.py
+requirements-*.in
+requirements-dev.txt
+requirements-tools.txt
+requirements-locking.txt

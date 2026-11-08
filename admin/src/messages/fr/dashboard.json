@@ -1,0 +1,11 @@
+{
+  "title": "Tableau de bord",
+  "totalUsers": "Utilisateurs",
+  "activeUsers": "Utilisateurs actifs",
+  "totalAdmins": "Admins",
+  "totalQuestions": "Questions",
+  "newUsers7d": "Nouveaux (7j)",
+  "newUsers30d": "Nouveaux (30j)",
+  "questions7d": "Questions (7j)",
+  "questions30d": "Questions (30j)"
+}

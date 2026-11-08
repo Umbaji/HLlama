@@ -1,0 +1,8 @@
+# What `pytest --cov` measures for the API (backend-tests.yml): the
+# application, not the tests or the migration scripts.
+[run]
+source = .
+omit =
+    tests/*
+    alembic/*
+    .venv/*

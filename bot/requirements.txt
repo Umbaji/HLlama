@@ -1,0 +1,32 @@
+flask
+python-dotenv
+aiohttp
+requests
+google-cloud-translate
+openai
+google-cloud
+torch
+torchaudio
+transformers
+soundfile
+pydub
+ffmpeg
+speechbrain 
+gradio
+librosa
+pandas
+langdetect
+dateparser 
+phonenumbers
+num2words
+numpy
+openai-whisper
+num2words
+roman
+unidecode
+#TTS
+accelerate
+#!pip install --upgrade --no-cache-dir git+https://github.com/openai/whisper.git
+#needs restart
+
+

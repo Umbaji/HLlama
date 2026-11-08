@@ -1,0 +1,157 @@
+"""
+Interface Gradio légère pour tester le system_prompt.txt en local,
+sans importer whatsapp_utils.py (évite de charger Whisper/TTS/speechbrain).
+
+Installation minimale :
+    pip install openai gradio python-dotenv dateparser
+
+Lancement :
+    python scripts/test_system_prompt.py
+
+Nécessite un fichier .env (à la racine de bot/) avec :
+    AZURE_OPENAI_ENDPOINT=...
+    AZURE_OPENAI_API_KEY=...
+    DEPLOYMENT_NAME=...
+
+Les conversations et le suivi de cycle sont stockés dans data/conversation_state.json
+(non commité — cf. cycle_tracking.py). La localisation réelle (partage GPS WhatsApp)
+n'est pas simulable ici : pour location_request/pharmacy_on_duty, ce script montre
+seulement que le bon routage est déclenché, pas le calcul de la pharmacie la plus proche.
+"""
+
+import json
+import os
+import re
+from datetime import datetime
+from pathlib import Path
+
+import gradio as gr
+from dotenv import load_dotenv
+from openai import OpenAI
+
+import cycle_tracking
+
+ROOT_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(ROOT_DIR / ".env")
+
+SYSTEM_PROMPT_PATH = ROOT_DIR / "app" / "utils" / "system_prompt.txt"
+HELPLINES_PATH = ROOT_DIR / "app" / "utils" / "helplines.json"
+TEST_USER_ID = "gradio_test_user"
+
+endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "")
+deployment_name = os.getenv("DEPLOYMENT_NAME", "your-deployment-name")
+api_key = os.getenv("AZURE_OPENAI_API_KEY", "")
+
+client = OpenAI(base_url=endpoint, api_key=api_key)
+
+
+def load_system_prompt() -> str:
+    return SYSTEM_PROMPT_PATH.read_text(encoding="utf-8")
+
+
+def parse_structured_response(raw: str):
+    """Reproduit le nettoyage/parsing JSON fait par handle_request() dans
+    whatsapp_utils.py. Retourne None si ce n'est pas du JSON valide."""
+    cleaned = re.sub(r"^```(?:json)?\s*", "", raw.strip())
+    cleaned = re.sub(r"\s*```$", "", cleaned).strip()
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        return None
+
+
+def extract_display_text(raw: str, data: dict) -> str:
+    """N'affiche que ce que l'utilisatrice WhatsApp verrait vraiment."""
+    request_type = data.get("request_type", "unknown")
+
+    if request_type == "location_request":
+        return f"[Demande de localisation envoyée : {data.get('request_content', 'N/A')}]"
+    if request_type == "agent_action":
+        return f"[Action agent déclenchée : {data.get('request_content', 'N/A')}]"
+    if request_type == "helpline_request":
+        helplines = json.loads(HELPLINES_PATH.read_text(encoding="utf-8"))
+        category = data.get("request_content", "")
+        helpline = helplines.get(category, helplines["sante_sexuelle"])
+        return f"{helpline['name']} : {helpline['number']}\n{helpline['description']}"
+
+    # "question" et "translation" portent le texte utile dans "response"
+    return data.get("response", raw)
+
+
+def respond(message, history):
+    system_prompt = load_system_prompt()  # relu à chaque message pour itérer sans relancer Gradio
+
+    messages = [{"role": "system", "content": system_prompt}]
+    for user_msg, bot_msg in history:
+        messages.append({"role": "user", "content": user_msg})
+        messages.append({"role": "assistant", "content": bot_msg})
+    messages.append({"role": "user", "content": message})
+
+    response = client.chat.completions.create(
+        messages=messages,
+        max_completion_tokens=512,
+        temperature=1.0,
+        top_p=1.0,
+        model=deployment_name,
+    )
+    raw = response.choices[0].message.content
+    data = parse_structured_response(raw)
+
+    state = cycle_tracking.load_state()
+    cycle_tracking.append_message(state, TEST_USER_ID, "user", message)
+
+    request_type = data.get("request_type") if data else None
+
+    if request_type == "cycle_log":
+        # On met le cycle en attente : rien n'est confirme tant qu'elle n'a pas
+        # explicitement accepte le rappel (cf. reminder_confirmation ci-dessous).
+        date_expression = data.get("request_content", "aujourd'hui")
+        cycle = cycle_tracking.stage_period_start(state, TEST_USER_ID, date_expression)
+        natural_reply = data.get("response", "Merci de me le dire, je note ça.")
+        date_fr = datetime.fromisoformat(cycle["next_expected_date"]).strftime("%d/%m/%Y")
+        display_text = (
+            f"{natural_reply} Je peux t'envoyer un petit rappel autour du {date_fr} "
+            "pour tes prochaines règles, ça te va ? (réponds oui ou non)"
+        )
+
+    elif request_type == "reminder_confirmation":
+        decision = data.get("request_content", "")
+        natural_reply = data.get("response", "C'est noté.")
+        if decision == "accept":
+            cycle = cycle_tracking.confirm_pending_cycle(state, TEST_USER_ID)
+            if cycle:
+                preview = cycle_tracking.render_reminder_preview(cycle["next_expected_date"])
+                # En prod, ce rappel partirait un autre jour (via le scheduler). Pour la
+                # demo, on l'affiche tout de suite, clairement etiquete comme simulation.
+                display_text = (
+                    f"{natural_reply}\n\n"
+                    "---\n"
+                    f"🔔 *Simulation démo — ce rappel serait normalement envoyé le {cycle['next_expected_date']}, "
+                    "pas maintenant :*\n\n"
+                    f"{preview}"
+                )
+            else:
+                display_text = natural_reply  # pas de rappel en attente : rien a confirmer
+        else:
+            cycle_tracking.decline_pending_cycle(state, TEST_USER_ID)
+            display_text = natural_reply
+
+    else:
+        display_text = extract_display_text(raw, data) if data else raw
+
+    cycle_tracking.append_message(state, TEST_USER_ID, "assistant", display_text)
+    cycle_tracking.save_state(state)
+
+    return display_text
+
+
+if __name__ == "__main__":
+    demo = gr.ChatInterface(
+        fn=respond,
+        title="HLlama - Test du system prompt",
+        description=(
+            f"Prompt chargé depuis {SYSTEM_PROMPT_PATH.relative_to(ROOT_DIR)} (relu à chaque envoi). "
+            f"Conversations et cycle stockés dans {cycle_tracking.STATE_PATH.relative_to(ROOT_DIR)}."
+        ),
+    )
+    demo.launch()

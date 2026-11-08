@@ -1,0 +1,17 @@
+{
+  "sante_sexuelle": {
+    "name": "Espoir Vie-Togo",
+    "number": "80 00 00 11",
+    "description": "IST/VIH-SIDA, sante sexuelle et reproductive, violences basees sur le genre, hepatites. Ligne gratuite, lun-sam 8h-18h."
+  },
+  "violence_basee_genre": {
+    "name": "Ligne verte VBG - Ministere de l'Action Sociale, de la Solidarite, du Genre, de la Famille et de la Protection de l'Enfance",
+    "number": "8284",
+    "description": "Signalement de violences basees sur le genre."
+  },
+  "protection_enfance": {
+    "name": "Allo 1011",
+    "number": "1011",
+    "description": "Ligne de protection de l'enfance, reconnue par Child Helpline International."
+  }
+}

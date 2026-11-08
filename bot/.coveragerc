@@ -1,0 +1,7 @@
+# What `coverage run` measures for the bot (bot-tests.yml): the application,
+# not the tests that exercise it.
+[run]
+source = .
+omit =
+    tests/*
+    .venv/*

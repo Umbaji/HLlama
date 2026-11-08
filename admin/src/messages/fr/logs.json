@@ -1,0 +1,9 @@
+{
+  "title": "Journaux d'activite",
+  "action": "Action",
+  "admin": "Administrateur",
+  "target": "Cible",
+  "details": "Details",
+  "date": "Date",
+  "noLogs": "Aucun journal d'activite"
+}

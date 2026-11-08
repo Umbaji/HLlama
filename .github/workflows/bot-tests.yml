@@ -1,0 +1,93 @@
+name: Bot tests
+
+# The suite ran nowhere but on a developer's machine. This repository had two
+# deploy workflows and no check, so 197 tests stood between a pull request and
+# production only if someone remembered to run them.
+#
+# Python 3.12, the version the Dockerfile ships, and requirements-test.txt,
+# which holds what the tests import and not the runtime's torch and whisper.
+
+# The repository holds the bot, the API and the back office: this workflow
+# runs when the bot changes, or the secret guard its tests cover.
+on:
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - 'bot/**'
+      - 'scripts/**'
+      - '.github/workflows/bot-tests.yml'
+  push:
+    branches: [develop, main]
+    paths:
+      - 'bot/**'
+      - 'scripts/**'
+      - '.github/workflows/bot-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A second push to the same branch makes the first run pointless.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: bot
+
+jobs:
+  unittest:
+    name: unittest
+    runs-on: ubuntu-latest
+    env:
+      # app/utils/whatsapp_utils.py builds its OpenAI client at import time with
+      # api_key=os.getenv("AZURE_OPENAI_API_KEY", ""), and the client refuses to
+      # exist on an empty string. Three test modules import that module, so
+      # without this the suite errors before asserting anything. No test reaches
+      # the network: any non-empty string does, and a real key here would be a
+      # leak.
+      AZURE_OPENAI_API_KEY: not-a-real-key-no-test-calls-out
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: bot/requirements-test.txt
+
+      - name: Install what the tests import
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-test.txt
+
+      - name: Report the resolved versions
+        # pip resolves without complaint and a transitive dependency can still
+        # have pulled something unexpected. This says so out loud.
+        run: pip check
+
+      - name: Run the suite
+        # -t defaults to the start directory, and the module path puts the
+        # working directory on sys.path, so `from app.services import ...`
+        # resolves. tests/ is not a package, so -t . would fail to import it.
+        # Under coverage (bot/.coveragerc); below 15 % the Coverage step fails.
+        run: python -m coverage run -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Coverage
+        run: |
+          python -m coverage report
+          echo "### Bot coverage" >> "$GITHUB_STEP_SUMMARY"
+          python -m coverage report --format=markdown >> "$GITHUB_STEP_SUMMARY"
+          python -m coverage report --fail-under=15 > /dev/null
+
+      - name: Keep the coverage report
+        if: always()
+        run: python -m coverage html -d coverage-html || true
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: bot-coverage
+          path: bot/coverage-html/
+          retention-days: 90

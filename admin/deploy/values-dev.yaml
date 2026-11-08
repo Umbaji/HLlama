@@ -1,0 +1,5 @@
+replicaCount: 1
+
+image:
+  # :latest in dev: the kubelet pulls again on each pod re-creation.
+  pullPolicy: Always

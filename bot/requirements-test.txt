@@ -1,0 +1,33 @@
+# What the 197 tests actually need, and nothing more.
+#
+# requirements.txt installs torch, torchaudio, speechbrain, whisper, gradio and
+# librosa. None of them is imported by a test: the layout rule in README.md puts
+# everything testable in app/services/, free of heavy imports. Installing the
+# runtime set to run the suite would add minutes and gigabytes to every job for
+# packages no assertion touches.
+#
+# These are the module-level imports reached from tests/, transitively:
+#   - app/services/*            flask, requests, openai, phonenumbers
+#   - app/config.py             python-dotenv
+#   - app/utils/whatsapp_utils  dateparser, langdetect, num2words, pydub,
+#                               unidecode, google-cloud-translate, transformers
+#     (transformers resolves VitsModel to a dummy object without torch, which
+#      is why torch is not needed here)
+#
+# Keep this in step with requirements.txt when a version is pinned there.
+
+flask
+python-dotenv
+requests
+openai
+phonenumbers
+dateparser
+langdetect
+num2words
+pydub
+unidecode
+google-cloud-translate
+transformers
+
+# What the tests need to measure their coverage (bot-tests.yml).
+coverage>=7.4,<8

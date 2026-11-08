@@ -1,0 +1,57 @@
+# The public documentation site, built and published by
+# .github/workflows/docs.yml on every push to main that touches it.
+# The root files (README, charter, contributing, testing strategy...) stay
+# where GitHub shows them; scripts/docs_sources.sh copies them under
+# docs/project/ and docs/parts/ before the build, so the site and the
+# repository never hold two versions of the same text.
+site_name: HLlama
+site_description: A WhatsApp assistant for women's sexual and reproductive health in Togo and Benin, by Umbaji
+site_author: Umbaji
+site_url: https://umbaji.github.io/HLlama/
+repo_name: Umbaji/HLlama
+repo_url: https://github.com/Umbaji/HLlama
+edit_uri: edit/develop/docs/
+copyright: Copyright &copy; 2026 Umbaji. MIT licence.
+
+# Build files, not pages.
+exclude_docs: |
+  requirements.txt
+  .gitignore
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      toggle: { icon: material/brightness-7, name: Switch to dark mode }
+    - scheme: slate
+      toggle: { icon: material/brightness-4, name: Switch to light mode }
+  features:
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc: { permalink: true }
+  - pymdownx.superfences
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Architecture: architecture/system-overview.md
+  - The three parts:
+      - The bot: parts/bot.md
+      - The API: parts/backend.md
+      - The back office: parts/admin.md
+  - Contributing:
+      - How to contribute: project/contributing.md
+      - Pull requests: project/pr-workflow.md
+      - Testing strategy: project/testing-strategy.md
+  - Community:
+      - Code of conduct: project/code-of-conduct.md
+      - Handling a report: community/incident-reporting.md
+      - Security: project/security.md
+      - Support: project/support.md
+  - Project charter: project/charter.md

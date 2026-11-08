@@ -1,0 +1,10 @@
+{
+  "title": "Questions",
+  "question": "Question",
+  "askedBy": "Posee par",
+  "date": "Date",
+  "response": "Reponse du bot",
+  "deleteQuestion": "Supprimer la question",
+  "confirmDelete": "Voulez-vous vraiment supprimer cette question ?",
+  "questionDeleted": "Question supprimee"
+}

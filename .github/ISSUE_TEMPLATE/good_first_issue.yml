@@ -1,0 +1,56 @@
+# For maintainers: a task a newcomer can finish in a few hours, with
+# everything they need written in the issue itself.
+name: Good first issue (maintainers)
+description: A small, well-described task for a first contribution.
+title: "good first issue: "
+labels: ["good first issue"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A good first issue says where to look, what to change and how to
+        know it is done, so a newcomer never has to guess. Keep it to one
+        part and a few files.
+  - type: dropdown
+    id: part
+    attributes:
+      label: Which part?
+      options:
+        - The WhatsApp bot (bot/)
+        - The API (backend/)
+        - The back office (admin/)
+        - The documentation
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Why
+      description: The problem, in two or three sentences a newcomer understands.
+    validations:
+      required: true
+  - type: textarea
+    id: where
+    attributes:
+      label: Where to look
+      description: The files, and the functions or pages in them.
+      placeholder: "bot/app/services/reminder_flow.py, function `recap_text`"
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: What a reviewer checks. Include the test to add.
+      placeholder: |
+        - [ ] ...
+        - [ ] a test in bot/tests/ fails before the change and passes after
+    validations:
+      required: true
+  - type: textarea
+    id: how-to-test
+    attributes:
+      label: How to run the tests
+      value: |
+        See TESTING_STRATEGY.md. For the bot:
+        `cd bot && python -m unittest discover -s tests -p "test_*.py"`

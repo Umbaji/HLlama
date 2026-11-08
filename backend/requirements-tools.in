@@ -1,0 +1,2 @@
+-r requirements.in
+gradio>=6.16.0,<7.0

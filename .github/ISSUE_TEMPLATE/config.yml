@@ -1,0 +1,13 @@
+# Every issue starts from a form: a blank issue tends to miss the part, the
+# steps and the privacy check below.
+blank_issues_enabled: false
+contact_links:
+  - name: A security vulnerability
+    url: https://github.com/Umbaji/HLlama/blob/main/SECURITY.md
+    about: Never in a public issue. SECURITY.md says how to reach the maintainers privately.
+  - name: A Code of Conduct report
+    url: https://github.com/Umbaji/HLlama/blob/main/CODE_OF_CONDUCT.md
+    about: Write to contact@umbaji.org; the report stays confidential.
+  - name: Somebody needs medical help
+    url: https://github.com/Umbaji/HLlama/blob/main/SUPPORT.md
+    about: This tracker is for the software. In danger, call the emergency services of your country.

@@ -1,0 +1,51 @@
+replicaCount: 1
+
+image:
+  repository: your-registry.example.com/hllama-admin
+  pullPolicy: IfNotPresent
+  tag: "latest" # replaced by your deployment tooling (image.tag parameter)
+
+service:
+  port: 3010
+
+# / redirects to the default locale (3xx counts as up).
+probe:
+  httpGet:
+    path: /
+    port: http
+
+# NEXT_PUBLIC_API_URL is fixed in the image at build time (--build-arg).
+env: {}
+
+secretEnv: {}
+
+database:
+  enabled: false
+
+# The image runs as nextjs (uid 1001).
+securityContext:
+  runAsUser: 1001
+  runAsGroup: 1001
+
+# Next writes its cache under .next/cache.
+writableDirs:
+  - /tmp
+  - /app/.next/cache
+
+resources:
+  limits:
+    cpu: 300m
+    memory: 384Mi
+  requests:
+    cpu: 50m
+    memory: 128Mi
+
+# Free pod annotations; a deployer can set podAnnotations.rollme to a
+# changing value to force a new ReplicaSet from their own CI/CD.
+podAnnotations: {}
+
+# Recreate: one pod at a time; size the namespace quota accordingly.
+strategy:
+  type: Recreate
+
+secretStoreName: your-secret-store

@@ -1,0 +1,28 @@
+{
+  "title": "Documentary base",
+  "subtitle": "The documents the assistant may quote, and their passages in the base",
+  "corpus": {
+    "title": "Corpus documents",
+    "subtitle": "One file per document: the source, the date, and the passages held in the base",
+    "documents": "Documents",
+    "reader": "Reader",
+    "select": "Choose a document to read it.",
+    "source": "Source page",
+    "scan": "Scan the sources",
+    "scanning": "Scanning...",
+    "scanError": "The scan failed.",
+    "apply": "Apply",
+    "close": "Close",
+    "noDiff": "No difference with the source.",
+    "loading": "Loading...",
+    "loadError": "Could not load the corpus.",
+    "status": {
+      "unchanged": "unchanged",
+      "changed": "changed",
+      "new": "new",
+      "unreachable": "source unreachable",
+      "unreadable": "source unreadable",
+      "no_source": "unknown source"
+    }
+  }
+}
