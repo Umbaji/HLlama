@@ -1,0 +1,120 @@
+{
+  "_comment": "HLlama WhatsApp message templates. One object per template, in the order of docs/WHATSAPP_TEMPLATES.md. Create each with: POST https://graph.facebook.com/v21.0/<WABA_ID>/message_templates, header Authorization: Bearer <TOKEN>, Content-Type: application/json, body = the object itself (without this _comment key).",
+  "templates": [
+    {
+      "name": "hllama_rappel_cycle",
+      "language": "fr",
+      "category": "UTILITY",
+      "parameter_format": "NAMED",
+      "components": [
+        {
+          "type": "BODY",
+          "text": "Petit rappel de HLlama pour le {{date}}. Répondez à ce message pour le voir.",
+          "example": {
+            "body_text_named_params": [
+              { "param_name": "date", "example": "25/09/2026" }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "hllama_rappel_pilule",
+      "language": "fr",
+      "category": "UTILITY",
+      "parameter_format": "NAMED",
+      "components": [
+        {
+          "type": "BODY",
+          "text": "Petit rappel de HLlama prévu le {{date}}. Répondez à ce message pour le voir.",
+          "example": {
+            "body_text_named_params": [
+              { "param_name": "date", "example": "25/09/2026 à 08h00" }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "hllama_rappel_injection",
+      "language": "fr",
+      "category": "UTILITY",
+      "parameter_format": "NAMED",
+      "components": [
+        {
+          "type": "BODY",
+          "text": "Vous avez un rappel HLlama pour le {{date}}. Répondez à ce message pour le voir.",
+          "example": {
+            "body_text_named_params": [
+              { "param_name": "date", "example": "25/09/2026 à 08h00" }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "hllama_rappel_rdv",
+      "language": "fr",
+      "category": "UTILITY",
+      "parameter_format": "NAMED",
+      "components": [
+        {
+          "type": "BODY",
+          "text": "HLlama vous rappelle un rendez-vous le {{date}}. Répondez à ce message pour voir le détail.",
+          "example": {
+            "body_text_named_params": [
+              { "param_name": "date", "example": "25/09/2026 à 08h00" }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "hllama_rappel",
+      "language": "fr",
+      "category": "UTILITY",
+      "parameter_format": "NAMED",
+      "components": [
+        {
+          "type": "BODY",
+          "text": "Petit rappel de HLlama pour le {{date}}. Répondez à ce message pour le voir.",
+          "example": {
+            "body_text_named_params": [
+              { "param_name": "date", "example": "25/09/2026 à 08h00" }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "hllama_avis",
+      "language": "fr",
+      "category": "UTILITY",
+      "components": [
+        {
+          "type": "BODY",
+          "text": "Bonjour, ici HLlama. Nos échanges vous ont-ils été utiles ? Votre réponse nous aide à nous améliorer."
+        },
+        {
+          "type": "BUTTONS",
+          "buttons": [
+            { "type": "QUICK_REPLY", "text": "Utile" },
+            { "type": "QUICK_REPLY", "text": "Moyen" },
+            { "type": "QUICK_REPLY", "text": "Pas utile" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "hllama_notification",
+      "language": "fr",
+      "category": "UTILITY",
+      "components": [
+        {
+          "type": "BODY",
+          "text": "Vous avez un nouveau message de HLlama. Répondez à ce message pour le voir."
+        }
+      ]
+    }
+  ]
+}

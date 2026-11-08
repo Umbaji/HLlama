@@ -1,0 +1,63 @@
+replicaCount: 1
+
+image:
+  repository: your-registry.example.com/hllama-backend
+  pullPolicy: IfNotPresent
+  tag: "latest" # replaced by your deployment tooling (image.tag parameter)
+
+service:
+  port: 8000
+
+# GET / answers API_HEALTH_OK without touching the database.
+probe:
+  httpGet:
+    path: /
+    port: http
+
+# Plain settings (config.py). Secrets go in secretEnv / database below.
+env:
+  ENVIRONMENT: "production"
+  API_DOCS_ENABLED: "false"
+  HEALTH_LOOKUP_AUTH_REQUIRED: "false"
+  HEALTH_NEAREST_RATE_LIMIT_PER_MINUTE: "120"
+  HEALTH_GEOCODE_RATE_LIMIT_PER_MINUTE: "30"
+
+# Environment variable -> secret manager entry name.
+secretEnv: {}
+
+# DATABASE_URL, built from the server host and the application user's
+# password, both read from your secret manager.
+database:
+  enabled: false
+  scheme: postgresql+psycopg
+  user: ""
+  name: ""
+  hostSecret: ""
+  passwordSecret: ""
+
+# The image runs as root by default; any non-root uid can read /app.
+securityContext:
+  runAsUser: 10001
+  runAsGroup: 10001
+
+# Read-only root filesystem: only these directories are writable (emptyDir).
+writableDirs:
+  - /tmp
+
+resources:
+  limits:
+    cpu: "1"
+    memory: 768Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+# Free pod annotations; a deployer can set podAnnotations.rollme to a
+# changing value to force a new ReplicaSet from their own CI/CD.
+podAnnotations: {}
+
+# Recreate: one pod at a time; size the namespace quota accordingly.
+strategy:
+  type: Recreate
+
+secretStoreName: your-secret-store

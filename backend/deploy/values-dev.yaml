@@ -1,0 +1,41 @@
+replicaCount: 1
+
+podAnnotations:
+  # The new pods pull the image just pushed; this annotation gives them a new
+  # ReplicaSet, since the tag of the image never changes.
+  rollme: "2026-10-22T17:00:00Z"
+
+image:
+  # :latest in dev: the kubelet pulls again on each pod re-creation.
+  pullPolicy: Always
+
+env:
+  ENVIRONMENT: "staging"
+  API_DOCS_ENABLED: "false"
+  HEALTH_LOOKUP_AUTH_REQUIRED: "false"
+  HEALTH_NEAREST_RATE_LIMIT_PER_MINUTE: "120"
+  HEALTH_GEOCODE_RATE_LIMIT_PER_MINUTE: "30"
+  # The back office calls the API from the browser.
+  ALLOWED_ORIGINS: https://admin.dev.example.org
+  CONSENT_PAGE_BASE_URL: https://api.dev.example.org
+  # Embeddings off (model-call cost in dev): recall falls back to full-text.
+  EMBEDDING_ENABLED: "false"
+  # No WhatsApp alerts from dev.
+  MONITORING_ALERT_ENABLED: "false"
+  HOME: /tmp
+  LOGIN_TRUSTED_PROXY_HOPS: "1"
+
+secretEnv:
+  SECRET_KEY: hllama-secret-key
+  PSEUDO_ID_SECRET: hllama-pseudo-id-secret
+  CONSENT_TOKEN_SECRET: hllama-consent-token-secret
+  BOT_API_KEY: hllama-bot-api-key
+  MONITORING_API_KEY: hllama-monitoring-api-key
+  ADMIN_LOGIN_BUCKET_KEY: hllama-admin-login-bucket-key
+
+database:
+  enabled: true
+  user: hllama-user
+  name: hllama
+  hostSecret: psql-dev-host
+  passwordSecret: psql-dev-hllama-user-password

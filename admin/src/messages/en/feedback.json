@@ -1,0 +1,24 @@
+{
+  "title": "User feedback",
+  "subtitle": "Answers to the question the bot asks after a conversation, and free comments.",
+  "usefulnessAnswers": "\"Useful?\" answers",
+  "usefulRate": "Found useful",
+  "usefulRateHint": "Share of \"Useful\" answers",
+  "commentsCount": "Free comments",
+  "usefulnessBreakdown": "Were our exchanges useful to you?",
+  "answers": "All answers",
+  "allQuestions": "All questions",
+  "date": "Date",
+  "question": "Question",
+  "answer": "Answer",
+  "empty": "No feedback yet",
+  "questions": {
+    "usefulness": "Usefulness",
+    "comment": "Comment"
+  },
+  "ratings": {
+    "3": "Useful",
+    "2": "Average",
+    "1": "Not useful"
+  }
+}

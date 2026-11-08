@@ -1,0 +1,5 @@
+# The hooks and shell scripts run under sh, on Linux in CI and under Git Bash on
+# Windows. A CRLF line ending there is a syntax error, so keep them LF whatever
+# core.autocrlf says on the machine that checks them out.
+.githooks/* text eol=lf
+*.sh text eol=lf

@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name }}
+  labels:
+    app: {{ .Chart.Name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  {{- with .Values.strategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ .Chart.Name }}
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: {{ .Values.securityContext.runAsUser }}
+        runAsGroup: {{ .Values.securityContext.runAsGroup }}
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+          {{- if or .Values.secretEnv .Values.database.enabled }}
+          envFrom:
+            - secretRef:
+                name: {{ .Chart.Name }}-env
+          {{- end }}
+          {{- with .Values.env }}
+          env:
+            {{- range $name, $value := . }}
+            - name: {{ $name }}
+              value: {{ $value | quote }}
+            {{- end }}
+          {{- end }}
+          # Startup can be slow (migrations, model loading): the other probes
+          # only start once this one has passed.
+          startupProbe:
+            {{- toYaml .Values.probe | nindent 12 }}
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            {{- toYaml .Values.probe | nindent 12 }}
+            periodSeconds: 10
+          livenessProbe:
+            {{- toYaml .Values.probe | nindent 12 }}
+            periodSeconds: 20
+            timeoutSeconds: 5
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- with .Values.writableDirs }}
+          volumeMounts:
+            {{- range $i, $dir := . }}
+            - name: writable-{{ $i }}
+              mountPath: {{ $dir }}
+            {{- end }}
+          {{- end }}
+      {{- with .Values.writableDirs }}
+      volumes:
+        {{- range $i, $dir := . }}
+        - name: writable-{{ $i }}
+          emptyDir: {}
+        {{- end }}
+      {{- end }}

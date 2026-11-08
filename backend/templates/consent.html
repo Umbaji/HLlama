@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="$lang" dir="$dir">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="$meta_description">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#0B5C4A" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E1512" media="(prefers-color-scheme: dark)">
+<meta name="robots" content="noindex, nofollow">
+<title>$document_title</title>
+<link rel="icon" href="$static_base/mark.svg" type="image/svg+xml">
+<link rel="stylesheet" href="$static_base/consent.css">
+<!-- Not deferred: it must run before the first paint, or the device theme
+     flashes before the reader's own choice is applied. -->
+<script src="$static_base/consent-theme.js"></script>
+</head>
+<body class="c-body" data-lang="$lang" data-wa-number="$whatsapp_number" data-api-path="$api_path">
+
+<a class="c-skip" href="#decision">$skip_link</a>
+
+<header class="c-header">
+  <div class="c-header__inner">
+    <span class="c-brand">
+      <img class="c-brand__mark" src="$static_base/mark.svg" alt="" width="34" height="34">
+      <span class="c-brand__text">
+        <span class="c-brand__name">$brand_name</span>
+        <span class="c-brand__by">$brand_by</span>
+      </span>
+    </span>
+    <!-- Both languages keep a fixed position so the active pill slides between
+         them instead of the two codes swapping places. -->
+    <div class="c-lang" role="group" aria-label="$lang_group_label" data-lang-active="$lang">
+      <span class="c-lang__thumb" aria-hidden="true"></span>
+      <a class="c-lang__item" href="?lang=fr" hreflang="fr" lang="fr" data-langswitch$fr_current>
+        <span aria-hidden="true">FR</span>
+        <span class="c-sr">$lang_name_fr</span>
+      </a>
+      <a class="c-lang__item" href="?lang=en" hreflang="en" lang="en" data-langswitch$en_current>
+        <span aria-hidden="true">EN</span>
+        <span class="c-sr">$lang_name_en</span>
+      </a>
+    </div>
+  </div>
+  <div class="c-progress" role="progressbar" aria-label="$progress_label" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-progress>
+    <span class="c-progress__fill" data-progress-fill></span>
+  </div>
+</header>
+
+<main class="c-main" id="main">
+
+  <section class="c-hero">
+    <h1 class="c-hero__title">$page_title</h1>
+    <p class="c-hero__intro">$page_intro</p>
+    <p class="c-hero__meta">
+      <span class="c-chip">$version_label $policy_version</span>
+      <span class="c-hero__reading">$reading_time</span>
+      <a class="c-hero__reading" href="$policy_href">$policy_link_label</a>
+    </p>
+  </section>
+
+  <section class="c-card c-keypoints" aria-labelledby="h-keypoints">
+    <h2 class="c-card__title" id="h-keypoints">$key_points_title</h2>
+    <ul class="c-keypoints__list">$key_points_html</ul>
+  </section>
+
+  <nav class="c-toc" aria-labelledby="h-toc" data-toc hidden>
+    <h2 class="c-toc__title" id="h-toc">$summary_title</h2>
+    <ol class="c-toc__list" data-toc-list></ol>
+  </nav>
+
+  <article class="c-policy" id="policy">
+$legal_content
+  </article>
+
+  <section class="c-card c-decision" id="decision" aria-labelledby="h-decision">
+    <h2 class="c-card__title" id="h-decision">$decision_title</h2>
+    <p class="c-decision__intro">$decision_intro</p>
+    <ul class="c-decision__points">$decision_points_html</ul>
+
+    <noscript>
+      <p class="c-banner c-banner--warn">$noscript_message</p>
+    </noscript>
+
+    $link_state_html
+
+    <div class="c-choice" data-choice$choice_hidden>
+      <label class="c-check" for="read-checkbox">
+        <input class="c-check__input" type="checkbox" id="read-checkbox" data-check>
+        <span class="c-check__box" aria-hidden="true"></span>
+        <span class="c-check__label">$checkbox_label</span>
+      </label>
+
+      <div class="c-actions">
+        <button class="c-btn c-btn--primary" type="button" data-accept aria-describedby="accept-hint" disabled>
+          <svg class="c-btn__icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+            <path d="M4 10.6l4 3.9L16 5.6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="c-btn__label">$accept_label</span>
+        </button>
+        <button class="c-btn c-btn--ghost" type="button" data-refuse>
+          <svg class="c-btn__icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+            <circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="M5.2 14.8L14.8 5.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <span class="c-btn__label">$refuse_label</span>
+        </button>
+      </div>
+      <p class="c-hint" id="accept-hint" data-accept-hint>$accept_hint</p>
+      <p class="c-free">$free_choice</p>
+    </div>
+
+    <div class="c-status" role="status" aria-live="polite" data-status></div>
+  </section>
+
+  <p class="c-jump" data-jump hidden><a class="c-jump__link" href="#decision">$jump_to_decision</a></p>
+
+</main>
+
+<footer class="c-footer">
+  <div class="c-footer__text">
+    <p class="c-footer__line">$footer_contact <a href="mailto:contact@umbaji.org">contact@umbaji.org</a></p>
+    <p class="c-footer__line c-footer__muted">$footer_rights</p>
+  </div>
+  <!-- Theme lives here rather than in the header: it is chosen once, while the
+       header carries what a reader needs while reading. Hidden until the script
+       confirms it can actually switch. -->
+  <div class="c-theme" data-theme-control hidden>
+    <span class="c-theme__label" id="theme-label">$theme_label</span>
+    <div class="c-theme__options" role="radiogroup" aria-labelledby="theme-label">
+      <button class="c-theme__option" type="button" role="radio" aria-checked="false" data-theme-mode="auto">
+        <span aria-hidden="true">$theme_auto</span><span class="c-sr">$theme_auto_sr</span>
+      </button>
+      <button class="c-theme__option" type="button" role="radio" aria-checked="false" data-theme-mode="light">
+        <span aria-hidden="true">$theme_light</span><span class="c-sr">$theme_light_sr</span>
+      </button>
+      <button class="c-theme__option" type="button" role="radio" aria-checked="false" data-theme-mode="dark">
+        <span aria-hidden="true">$theme_dark</span><span class="c-sr">$theme_dark_sr</span>
+      </button>
+    </div>
+  </div>
+  <p class="c-footer__copyright">$footer_copyright</p>
+</footer>
+
+<!-- Data block, not executable script: it carries the interface strings the client
+     needs for the states it renders, and keeps the CSP free of inline script. -->
+<script type="application/json" data-strings>$client_strings_json</script>
+<script src="$static_base/consent-core.js" defer></script>
+<script src="$static_base/consent.js" defer></script>
+<script src="$static_base/consent-reading.js" defer></script>
+</body>
+</html>

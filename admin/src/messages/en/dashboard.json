@@ -1,0 +1,11 @@
+{
+  "title": "Dashboard",
+  "totalUsers": "Total users",
+  "activeUsers": "Active users",
+  "totalAdmins": "Admins",
+  "totalQuestions": "Questions",
+  "newUsers7d": "New users (7d)",
+  "newUsers30d": "New users (30d)",
+  "questions7d": "Questions (7d)",
+  "questions30d": "Questions (30d)"
+}

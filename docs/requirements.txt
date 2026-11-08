@@ -1,0 +1,4 @@
+# What .github/workflows/docs.yml installs to build the site. Pinned: a new
+# release of the theme must not change the site without a pull request.
+mkdocs==1.6.1
+mkdocs-material==9.6.23

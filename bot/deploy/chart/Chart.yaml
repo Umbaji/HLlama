@@ -1,0 +1,6 @@
+apiVersion: v2
+name: hllama-webhook
+description: HLlama WhatsApp bot (Meta webhook, Flask)
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

@@ -1,0 +1,41 @@
+# Production runtime only. Anything used solely by the local Gradio tester or by
+# dead code paths belongs in requirements.txt, not here: every package listed
+# lands in the image, and the image size is what makes the deploy slow.
+#
+# Deliberately NOT installed here:
+#   gradio        - bot_tester.py only, never imported by the Flask app
+#   pandas        - no call site
+#   ffmpeg (pip)  - dead stub package; the real ffmpeg is the apt one
+#   google-cloud  - deprecated meta-package that drags in dozens of GCP clients
+#   speechbrain   - only identify_language(), which the webhook never calls
+#   torchaudio    - same, and it is imported lazily now
+#   accelerate    - only needed for sharded/quantised loading, unused here
+
+# --- web layer -------------------------------------------------------------
+flask
+python-dotenv
+requests
+
+# --- model providers -------------------------------------------------------
+openai
+google-cloud-translate
+
+# --- speech ----------------------------------------------------------------
+# openai-whisper for STT. Piper for TTS (female French voice, fast on CPU);
+# transformers+VITS stays installed as the fallback provider.
+faster-whisper
+openai-whisper
+piper-tts
+transformers
+soundfile
+librosa
+pydub
+numpy
+
+# --- text handling ---------------------------------------------------------
+langdetect
+dateparser
+phonenumbers
+num2words
+roman
+unidecode

@@ -1,0 +1,30 @@
+replicaCount: 1
+
+image:
+  # :latest in dev: the kubelet pulls again on each pod re-creation.
+  pullPolicy: Always
+
+env:
+  # The API, inside the namespace (the bot appends /api/...).
+  NEAREST_API_URL: http://hllama-backend:8000
+  VERSION: v22.0
+  # Piper (in the image), not ElevenLabs: no paid voice in dev.
+  TTS_PROVIDER: piper
+  # Name of the model deployment on the dev Azure OpenAI resource.
+  DEPLOYMENT_NAME: your-deployment-name
+  # The models are in the image: never reach the Hugging Face Hub.
+  HF_HUB_OFFLINE: "1"
+  TRANSFORMERS_OFFLINE: "1"
+  HOME: /tmp
+
+# Meta and Azure OpenAI values are set by hand in your secret store
+# (placeholders here). Until then the webhook refuses every message.
+secretEnv:
+  ACCESS_TOKEN: hllama-whatsapp-access-token
+  APP_SECRET: hllama-whatsapp-app-secret
+  PHONE_NUMBER_ID: hllama-whatsapp-phone-number-id
+  VERIFY_TOKEN: hllama-verify-token
+  AZURE_OPENAI_ENDPOINT: hllama-azure-openai-endpoint
+  AZURE_OPENAI_API_KEY: hllama-azure-openai-api-key
+  BOT_API_KEY: hllama-bot-api-key
+  PSEUDO_ID_SECRET: hllama-pseudo-id-secret

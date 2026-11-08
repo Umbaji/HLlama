@@ -1,0 +1,181 @@
+name: Backend tests
+
+# The suite was green nowhere. This repository only ever ran deploy workflows,
+# so nothing executed pytest between a pull request and production, and a
+# developer machine whose packages have drifted from requirements.txt fails for
+# reasons that have nothing to do with the change under review — a bcrypt newer
+# than the pinned 4.0.1 makes every test that creates a user fail inside
+# hash_password.
+#
+# Python 3.12 and requirements.txt, the same pair the Dockerfile ships, so a
+# green run here means the suite passes against what production runs.
+
+# Runs when the API changes (the repository also holds the bot and the back
+# office), or the secret guard shared at the root.
+on:
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-tests.yml'
+      - 'scripts/**'
+  push:
+    branches: [develop, main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-tests.yml'
+      - 'scripts/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A second push to the same branch makes the first run pointless.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  pytest:
+    name: pytest
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: hllama_test
+          POSTGRES_PASSWORD: hllama_test
+          POSTGRES_DB: hllama_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U hllama_test -d hllama_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      LOGIN_THROTTLE_TEST_DATABASE_URL: postgresql+psycopg://hllama_test:hllama_test@localhost:5432/hllama_test
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
+            backend/requirements-tools.txt
+            backend/requirements-locking.txt
+            backend/requirements.in
+            backend/requirements-dev.in
+            backend/requirements-tools.in
+
+      - name: Install the pinned dependencies
+        run: |
+          pip install --require-hashes -r requirements-dev.txt
+
+      - name: Check the installed versions match the pins
+        # pip resolves without complaint and then a transitive dependency can
+        # still have pulled a different version in. This says so out loud.
+        run: pip check
+
+      - name: Ensure development-only packages are not in the test lock
+        run: |
+          python -c "from importlib.metadata import distributions; names = {d.metadata['Name'].lower().replace('_', '-') for d in distributions()}; forbidden = {'gradio', 'pillow', 'python-jose', 'ecdsa'}; found = sorted(names & forbidden); print(f'Unexpected packages: {found}'); raise SystemExit(bool(found))"
+
+      - name: Run the suite
+        # The tests build their own in-memory SQLite engine per test; conftest
+        # supplies the settings that have no default, so no .env is needed.
+        # Under coverage (backend/.coveragerc); below 15 % the Coverage step fails.
+        run: python -m pytest tests/ -q --cov --cov-report=
+
+      - name: Coverage
+        run: |
+          python -m coverage report
+          echo "### Backend coverage" >> "$GITHUB_STEP_SUMMARY"
+          python -m coverage report --format=markdown >> "$GITHUB_STEP_SUMMARY"
+          python -m coverage report --fail-under=15 > /dev/null
+
+      - name: Keep the coverage report
+        if: always()
+        run: python -m coverage html -d coverage-html || true
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: backend-coverage
+          path: backend/coverage-html/
+          retention-days: 90
+
+  dependency-audit:
+    name: dependency audit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned audit tools
+        run: pip install -r requirements-locking.txt
+
+      - name: Audit production lock
+        run: pip-audit --requirement requirements.txt --require-hashes --format json --output production-audit.json
+
+      - name: Audit local tools lock
+        continue-on-error: true
+        run: pip-audit --requirement requirements-tools.txt --require-hashes --format json --output tools-audit.json
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: backend-dependency-audit
+          path: backend/*-audit.json
+          retention-days: 90
+
+  production-image:
+    name: production image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Build production image
+        run: docker build --file Dockerfile --tag hllama-backend:security-audit .
+
+      - name: Inspect production package inventory
+        run: |
+          docker run --rm --entrypoint python hllama-backend:security-audit -c "from importlib.metadata import distributions; names = {d.metadata['Name'].lower().replace('_', '-') for d in distributions()}; forbidden = {'gradio', 'pillow', 'python-jose', 'ecdsa'}; found = sorted(names & forbidden); print(f'Unexpected packages: {found}'); raise SystemExit(bool(found))"
+          docker run --rm --entrypoint python hllama-backend:security-audit -m pip list --format=json > production-package-inventory.json
+          docker image inspect hllama-backend:security-audit --format='Production image size: {{.Size}} bytes' | tee production-image-size.txt
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: backend-production-image-inventory
+          path: |
+            backend/production-package-inventory.json
+            backend/production-image-size.txt
+          retention-days: 90
+
+  local-tools-image:
+    name: local tools image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Build local tools image
+        run: docker build --file Dockerfile.dev --tag hllama-backend:local-tools .
+        working-directory: backend
+
+      - name: Verify Gradio remains available for local testing
+        run: docker run --rm --entrypoint python hllama-backend:local-tools -c "import gradio, PIL; print(f'Gradio {gradio.__version__}; Pillow {PIL.__version__}')"
+        working-directory: backend

@@ -1,0 +1,30 @@
+__pycache__
+*.pyc
+.git
+.venv
+.env
+.env.*
+tmp
+logs
+*.log
+bot_tester.py
+user_queries_db.json
+deploy-on-gcp.yaml
+
+# Build-context trimming. None of this belongs in the runtime image and it all
+# invalidates the COPY layer whenever it changes.
+data/*.wav
+data/*.mp3
+data/tmp*
+output_pitched.wav
+threads_db
+tmp/
+*.md
+Dockerfile.dev
+docker-compose*.yml
+docker-compose*.yaml
+activate-sa.sh
+wa_ks.py
+requirements.txt
+env.zip
+*.pyc
