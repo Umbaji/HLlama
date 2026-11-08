@@ -1,0 +1,53 @@
+replicaCount: 1
+
+image:
+  repository: your-registry.example.com/hllama-bot
+  pullPolicy: IfNotPresent
+  tag: "latest" # replaced by your deployment tooling (image.tag parameter)
+
+service:
+  port: 8000
+
+# No health route: GET /webhook without Meta's parameters answers 400. A TCP
+# check tells the process is serving.
+probe:
+  tcpSocket:
+    port: http
+
+env: {}
+
+# Environment variable -> secret manager entry name.
+secretEnv: {}
+
+database:
+  enabled: false
+
+securityContext:
+  runAsUser: 10001
+  runAsGroup: 10001
+
+# Read-only root filesystem. data/ receives the voice notes (in and out), the
+# models baked in the image (/opt) are only read.
+writableDirs:
+  - /tmp
+  - /app/data
+
+# Whisper small, VITS and Piper stay in memory: about 2 GiB once warm. The
+# image sets 2 threads for the ASR (TORCH_NUM_THREADS), hence the 2 CPU limit.
+resources:
+  limits:
+    cpu: "2"
+    memory: 3Gi
+  requests:
+    cpu: 250m
+    memory: 2Gi
+
+# Free pod annotations; a deployer can set podAnnotations.rollme to a
+# changing value to force a new ReplicaSet from their own CI/CD.
+podAnnotations: {}
+
+# Recreate: one pod at a time; size the namespace quota accordingly.
+strategy:
+  type: Recreate
+
+secretStoreName: your-secret-store

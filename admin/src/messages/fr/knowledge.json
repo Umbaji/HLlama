@@ -1,0 +1,28 @@
+{
+  "title": "Base documentaire",
+  "subtitle": "Les documents que l'assistant peut citer, et leurs passages en base",
+  "corpus": {
+    "title": "Documents du corpus",
+    "subtitle": "Une fiche par document : la source, la date, et les passages qui sont en base",
+    "documents": "Documents",
+    "reader": "Lecture",
+    "select": "Choisissez un document pour le lire.",
+    "source": "Page source",
+    "scan": "Scanner les sources",
+    "scanning": "Analyse en cours...",
+    "scanError": "Le scan a échoué.",
+    "apply": "Appliquer",
+    "close": "Fermer",
+    "noDiff": "Aucune différence avec la source.",
+    "loading": "Chargement...",
+    "loadError": "Impossible de charger le corpus.",
+    "status": {
+      "unchanged": "inchangé",
+      "changed": "modifié",
+      "new": "nouveau",
+      "unreachable": "source injoignable",
+      "unreadable": "source illisible",
+      "no_source": "source inconnue"
+    }
+  }
+}

@@ -1,0 +1,60 @@
+name: Feature request
+description: Something the assistant, the API or the back office should do.
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Start from the problem, not the solution: who needs what, and what
+        they do today without it. The project's scope is in
+        [PROJECT_CHARTER.md](https://github.com/Umbaji/HLlama/blob/main/PROJECT_CHARTER.md).
+  - type: dropdown
+    id: part
+    attributes:
+      label: Which part?
+      multiple: true
+      options:
+        - The WhatsApp bot (bot/)
+        - The API (backend/)
+        - The back office (admin/)
+        - The documentation
+    validations:
+      required: true
+  - type: dropdown
+    id: for-whom
+    attributes:
+      label: For whom?
+      options:
+        - The people who write to the assistant
+        - The team that runs the service
+        - The developers and the teams who deploy it
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What is hard or impossible today, with an example (made-up data).
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you propose
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Other ways you considered
+  - type: checkboxes
+    id: principles
+    attributes:
+      label: The project's rules
+      description: From CONTRIBUTING.md.
+      options:
+        - label: It does not make the assistant state a figure (dosage, price, duration) that the documentary base does not carry.
+          required: true
+        - label: It sends no identifying data of a person to the model or to a third party.
+          required: true

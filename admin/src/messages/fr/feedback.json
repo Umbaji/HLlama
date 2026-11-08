@@ -1,0 +1,24 @@
+{
+  "title": "Retours utilisatrices",
+  "subtitle": "Réponses à la question posée par le bot après une conversation, et commentaires libres.",
+  "usefulnessAnswers": "Réponses « utile ? »",
+  "usefulRate": "Jugé utile",
+  "usefulRateHint": "Part des réponses « Utile »",
+  "commentsCount": "Commentaires libres",
+  "usefulnessBreakdown": "Nos échanges vous ont-ils été utiles ?",
+  "answers": "Toutes les réponses",
+  "allQuestions": "Toutes les questions",
+  "date": "Date",
+  "question": "Question",
+  "answer": "Réponse",
+  "empty": "Aucun retour pour l'instant",
+  "questions": {
+    "usefulness": "Utilité",
+    "comment": "Commentaire"
+  },
+  "ratings": {
+    "3": "Utile",
+    "2": "Moyen",
+    "1": "Pas utile"
+  }
+}

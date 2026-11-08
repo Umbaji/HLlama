@@ -1,0 +1,16 @@
+__pycache__/
+.env
+.env.*
+!.env.example
+*.pyc
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+pytest-cache-files-*/
+*.log
+run.py
+/test_*.py
+DESCRIPTION_PROJET.txt

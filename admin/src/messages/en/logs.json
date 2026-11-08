@@ -1,0 +1,9 @@
+{
+  "title": "Activity Logs",
+  "action": "Action",
+  "admin": "Administrator",
+  "target": "Target",
+  "details": "Details",
+  "date": "Date",
+  "noLogs": "No activity logs"
+}

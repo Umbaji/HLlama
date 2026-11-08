@@ -1,0 +1,43 @@
+# The repository root had no ignore file at all: a .env dropped here, next to
+# README.md, was ignored by nothing. bot/.gitignore only
+# covers its own directory.
+#
+# These patterns have no leading slash, so they apply at every depth.
+
+# Secrets. Never committed, whatever the reason (scripts/check_secrets.py
+# refuses them even when `git add -f` bypasses this list).
+.env
+.env.*
+!.env.example
+*.env
+*.pem
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+credentials.json
+service-account*.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.venv-*/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/
+
+# Logs
+*.log
+
+# The documentation site built by mkdocs (scripts/docs_sources.sh, mkdocs.yml).
+site/
+
+# Coverage reports (bot-tests.yml, backend-tests.yml, admin-checks.yml).
+.coverage
+coverage-html/

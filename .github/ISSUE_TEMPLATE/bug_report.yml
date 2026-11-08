@@ -1,0 +1,81 @@
+name: Bug report
+description: Something in the bot, the API or the back office does not work as it should.
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time. This tracker is public: **write no phone
+        number, no name and no message of a real person** who wrote to the
+        assistant. Describe the conversation in your own words, or with
+        made-up data (`+228 90 00 00 00`, "Ama").
+
+        A security vulnerability goes through [SECURITY.md](https://github.com/Umbaji/HLlama/blob/main/SECURITY.md), not here.
+  - type: dropdown
+    id: part
+    attributes:
+      label: Which part?
+      options:
+        - The WhatsApp bot (bot/)
+        - The API (backend/)
+        - The back office (admin/)
+        - The documentation
+        - I do not know
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you saw. For a conversation, what the person wrote and what the assistant answered, in made-up words.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should have happened
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to reproduce it
+      description: The steps, from the start. With the bot, `python bot_tester.py` reproduces a conversation without WhatsApp.
+      placeholder: |
+        1. Send "rappelle-moi ma piqure dans 3 mois"
+        2. Confirm the recap
+        3. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: language
+    attributes:
+      label: Language of the conversation
+      description: Only for the bot.
+      options:
+        - French
+        - Ewé
+        - Mina
+        - Kabyè
+        - Another one
+        - Not a conversation
+  - type: input
+    id: where
+    attributes:
+      label: Where
+      description: Your own machine (with the commit), the dev environment, or production. Date and time if you know them.
+      placeholder: "local, develop at 124bf65 / production, 2026-10-24 around 14:00 Lomé time"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Remove every phone number, name, token and key before pasting.
+      render: text
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy
+      options:
+        - label: This issue holds no phone number, name, message or health detail of a real person, and no key or token.
+          required: true

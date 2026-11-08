@@ -1,0 +1,19 @@
+services:
+  bot:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    volumes:
+      - bot_hf_cache:/root/.cache/huggingface
+      - bot_whisper_cache:/root/.cache/whisper
+    env_file:
+      - path: .env
+        required: true
+    environment:
+      NEAREST_API_URL: ${NEAREST_API_URL:-http://backend:8000}
+      HF_HOME: /root/.cache/huggingface
+
+volumes:
+  bot_hf_cache:
+  bot_whisper_cache:

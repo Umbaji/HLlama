@@ -1,0 +1,4 @@
+#!/bin/sh
+# Refuses a commit that carries a secret. See scripts/check_secrets.py.
+# Installed by scripts/install-hooks.sh, which sets core.hooksPath.
+exec python "$(git rev-parse --show-toplevel)/scripts/check_secrets.py" --staged
