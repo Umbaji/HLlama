@@ -8,7 +8,6 @@ from helpers.anonymity import decrypt_number, mask_number
 from models.activity_log import ActivityLogModel
 from models.question import QuestionModel
 from models.user import UserModel
-from services.reminder_service import cancel_pending_reminders
 
 
 def log_activity(db: Session, admin_id: uuid.UUID, action: str, target_type: str, target_id: str = None, details: str = None):
@@ -54,7 +53,6 @@ def soft_delete_user(db: Session, user_id: uuid.UUID, admin_id: uuid.UUID) -> Us
         return None
     user.is_active = False
     user.deleted_at = datetime.now(timezone.utc)
-    cancel_pending_reminders(db, user.pseudo_id, commit=False)
     db.commit()
     db.refresh(user)
     log_activity(db, admin_id, "DELETE_USER", "user", str(user_id))

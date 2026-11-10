@@ -34,7 +34,7 @@ body:
     attributes:
       label: Where to look
       description: The files, and the functions or pages in them.
-      placeholder: "bot/app/services/reminder_flow.py, function `recap_text`"
+      placeholder: "bot/app/services/health_fact_flow.py, function `recap_text`"
     validations:
       required: true
   - type: textarea

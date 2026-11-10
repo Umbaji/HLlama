@@ -248,4 +248,4 @@ def test_every_route_message_is_registered() -> None:
         for code in re.findall(r'server_message\(\s*"([A-Z0-9_]+)"', path.read_text(encoding="utf-8"))
     }
     assert used - known == set()
-    assert {"REMINDER_CREATED", "KNOWLEDGE_SEARCHED"} <= used
+    assert {"FEEDBACK_RECORDED", "KNOWLEDGE_SEARCHED"} <= used

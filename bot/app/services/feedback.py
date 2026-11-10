@@ -1,11 +1,10 @@
 """Feedback questions after use (contract section 3).
 
 Two questions at most: `usefulness` through three reply buttons, then an
-optional free-text `comment` asked once. The backend decides WHEN to ask
-(a `kind='feedback'` reminder); the bot only asks and forwards the answers.
+optional free-text `comment` asked once. The bot only asks and forwards the
+answers.
 """
 import logging
-import threading
 
 from app.services.backend_client import post_json
 from app.services.chat_state import feedback_comment_asked, feedback_comment_pending
@@ -26,16 +25,10 @@ COMMENT_THANKS_TEXT = "Merci, votre commentaire a bien été transmis \U0001F49B
 
 ANSWER_MAX_CHARS = 500
 _QUESTION_RATINGS = {"usefulness": {1, 2, 3}}
-_SCHEDULE_TIMEOUT_SECONDS = 3
 
 
 def usefulness_payload(wa_id: str) -> dict:
     return build_buttons_payload(wa_id, USEFULNESS_QUESTION, USEFULNESS_BUTTONS)
-
-
-def usefulness_quick_reply_payloads() -> list[str]:
-    """Payloads for the quick replies of the feedback template, in button order."""
-    return [button_id for button_id, _ in USEFULNESS_BUTTONS]
 
 
 def submit_feedback(wa_id: str, question_key: str, rating: int | None = None, answer: str | None = None) -> bool:
@@ -52,20 +45,6 @@ def submit_feedback(wa_id: str, question_key: str, rating: int | None = None, an
         )
         return False
     return True
-
-
-def schedule_feedback(wa_id: str, background: bool = True) -> None:
-    """Asks the backend to plan a feedback question. Fire-and-forget: the
-    backend applies the delay and the cooldown, a failure only skips a survey."""
-    payload = {"pseudo_id": pseudo_id_for(wa_id), "telnumber": wa_id}
-
-    def _call():
-        post_json("/api/bot/feedback/schedule", payload, timeout=_SCHEDULE_TIMEOUT_SECONDS)
-
-    if background:
-        threading.Thread(target=_call, name="feedback-schedule", daemon=True).start()
-    else:
-        _call()
 
 
 def parse_feedback_button(button_id: str) -> tuple[str, int] | None:

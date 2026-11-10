@@ -16,7 +16,6 @@ from models import (
     ActivityLogModel,
     HealthLookupBucketModel,
     QuestionModel,
-    ReminderModel,
     UserModel,
 )
 

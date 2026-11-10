@@ -1,12 +1,12 @@
 """
 Envoie un message WhatsApp base sur un template approuve, pour tester
-les rappels business-initiated (sans que l'utilisatrice ait ecrit en premier).
+les messages business-initiated (sans que l'utilisatrice ait ecrit en premier).
 
 Installation minimale :
     pip install requests python-dotenv
 
 Lancement (template a parametres nommes, ex. bibliotheque de modeles) :
-    python scripts/send_template_message.py appointment_reminder fr \
+    python scripts/send_template_message.py mon_template_nomme fr \
         --named date="12 aout" texte="14h" "nom d'entreprise"="HLlama"
 
 Lancement (template a parametres positionnels, style {{1}} {{2}}) :

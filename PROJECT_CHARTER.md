@@ -19,8 +19,6 @@ HLlama is a WhatsApp assistant (see `docs/architecture/system-overview.md`):
 - it answers health questions in French, from a documentary base whose figures
   carry their source and their date;
 - it asks for consent before anything else, and forgets a person who asks;
-- it sends the reminders a person asked for (contraceptive injection, prenatal
-  visit, appointment);
 - it answers a serious situation with the emergency numbers of the country and
   the nearest health service.
 

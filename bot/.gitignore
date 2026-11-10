@@ -28,8 +28,6 @@ tmp/
 # Databases
 *.json
 !app/utils/helplines.json
-# Reference data, not runtime config: the WhatsApp templates as API payloads.
-!docs/whatsapp_templates.json
 threads_db
 
 # Logs

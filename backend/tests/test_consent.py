@@ -266,52 +266,19 @@ def _accept(client: TestClient, pseudo_id: str) -> None:
     )
 
 
-def test_accepting_queues_a_confirmation_for_a_known_user(client: TestClient, db: Session) -> None:
-    """She may never return to WhatsApp, so the reply is pushed to her."""
-    from models.reminder import ReminderModel
-    from services.user_service import get_or_create_bot_user
-
-    user = get_or_create_bot_user(db, pseudo_id_for(TEL), TEL)
-    _accept(client, user.pseudo_id)
-
-    queued = db.query(ReminderModel).filter(ReminderModel.pseudo_id == user.pseudo_id).all()
-    assert len(queued) == 1
-    assert queued[0].kind == "notice"
-    assert queued[0].status == "pending"
-    assert "consentement" in queued[0].message
-
-
-def test_refusing_queues_nothing(client: TestClient, db: Session) -> None:
-    """After a refusal the bot stays silent."""
-    from models.reminder import ReminderModel
-    from services.user_service import get_or_create_bot_user
-
-    user = get_or_create_bot_user(db, pseudo_id_for(TEL), TEL)
-    client.post(
-        "/api/consent",
-        json={"token": generate_consent_token(user.pseudo_id), "decision": "refused"},
-    )
-
-    assert db.query(ReminderModel).count() == 0
-
-
-def test_accepting_without_a_known_user_records_the_consent_anyway(client: TestClient, db: Session) -> None:
-    """No number on file means nothing can be sent, and that must not fail the
-    decision itself."""
-    from models.reminder import ReminderModel
-
+def test_accepting_without_a_known_user_records_the_consent_anyway(client: TestClient) -> None:
+    """No user on file yet must not fail the decision itself."""
     response = client.post(
         "/api/consent",
         json={"token": generate_consent_token(pseudo_id_for(TEL)), "decision": "accepted"},
     )
 
     assert response.status_code == 200
-    assert db.query(ReminderModel).count() == 0
 
 
 def test_asking_for_a_link_records_that_she_just_wrote(client: TestClient, db: Session) -> None:
-    """A blocked message leaves no exchange behind; without this the WhatsApp
-    window would look closed and the confirmation would never be sent."""
+    """A blocked message leaves no exchange behind; without this her last
+    activity would look older than it is."""
     from services.user_service import find_user_by_pseudo_id
 
     response = client.post("/api/bot/consent/link", json=_lookup())

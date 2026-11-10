@@ -9,7 +9,7 @@ The backend powers:
 - the **admin dashboard** (`admin/`, Next.js): statistics, user management, question
   moderation, documentary-base review, activity logs, CSV exports;
 - the **WhatsApp bot** (`bot/`, Flask): exchange storage, history, full-text
-  search, reminders and feedback;
+  search and feedback;
 - **external clients**: authentication and nearby healthcare place lookup.
 
 ## Features
@@ -21,7 +21,7 @@ The backend powers:
 - **JWT authentication**: `POST /api/login`, tokens signed with `PyJWT`,
   passwords hashed with `bcrypt`, configurable token lifetime.
 - **Questions & exchanges**: questions asked from a phone number, bot exchanges
-  (`request_type`: `question`, `translation`, `agent_action`, `reminder`, …),
+  (`request_type`: `question`, `translation`, `agent_action`, `health_fact`, …),
   full-text search over the history.
 - **Statistics** (admin): overview counts for the dashboard.
 - **Management** (admin): activate/deactivate, soft delete, promote, question
@@ -32,20 +32,10 @@ The backend powers:
   fact sheets, a review workflow (scan, diff, apply, supervise) for admins.
 - **Health facts**: facts she declares about her own health, stored
   pseudonymously and removable on request.
-- **Reminders**: kinds (`cycle`, `pill`, `injection`, `appointment`,
-  `feedback`, `notice`, `other`), one-off or repeating
-  (`repeat_interval_days`, the next occurrence is created when one is
-  reported sent), lifecycle `pending` → `sending` (claimed by a bot poll, 5 min
-  lease) → `sent` / `failed`, then `undelivered` if WhatsApp reports a delivery
-  failure, or `cancelled`. Timezone derived from the phone number (`phonenumbers` +
-  `zoneinfo`, default `Africa/Lome`), past dates rejected (`REMINDER_IN_PAST`).
-  Reminders are only handed out for active, non-deleted users with accepted
-  consent; deleting a user cancels her open reminders.
 - **Consent**: web consent page opened from a tokenised link; the bot asks the
   status and the link with the number in the request body, never in the URL.
-- **Feedback**: one short feedback question queued after a conversation
-  (`FEEDBACK_DELAY_MINUTES`, at most once per `FEEDBACK_COOLDOWN_DAYS`), answers
-  stored pseudonymously and aggregated per question for admins.
+- **Feedback**: answers stored pseudonymously and aggregated per question for
+  admins.
 - **Service misses**: formulations the bot could not route to a known service,
   logged for review (bot) and listed for admins.
 
@@ -58,7 +48,6 @@ The backend powers:
 | Database | PostgreSQL 16 (+ pgvector for the knowledge base) |
 | Auth | JWT (`PyJWT`), `passlib[bcrypt]`, TOTP (MFA) |
 | Geolocation | `googlemaps` + `haversine` |
-| Timezones | `phonenumbers` + `zoneinfo` |
 | API docs | Swagger UI (`/docs`) and ReDoc (`/redoc`) |
 | Deployment | Docker, `docker-compose` at project root |
 
@@ -86,13 +75,12 @@ backend/
 |   |-- users.py, admins.py       #   User and administrator CRUD
 |   |-- questions.py              #   Questions of a number (bot)
 |   |-- bot.py                    #   Exchanges, history, knowledge search,
-|   |                             #   profile, reminders, feedback (bot)
+|   |                             #   profile, feedback (bot)
 |   |-- health.py                 #   /api/nearest/{category}, /api/geocode
 |   |-- health_fact.py            #   Health facts she declares (bot)
 |   |-- knowledge.py              #   Documentary base review (admin)
 |   |-- service_miss.py           #   Unrouted requests, logged and listed
 |   |-- consent.py                #   The consent/policy pages and the consent API
-|   |-- reminders.py              #   Reminder management (admin)
 |   |-- management.py             #   Admin actions and CSV exports
 |   |-- stats.py                  #   Overview aggregate for the dashboard
 |   `-- monitoring.py             #   Health probes and their history
@@ -103,17 +91,15 @@ backend/
 |   |-- login_throttle.py         #   Shared PostgreSQL login budgets
 |   |-- user_service.py           #   Users, bot users, encrypted numbers
 |   |-- question_service.py       #   Exchanges and history
-|   |-- reminder_service.py       #   Scheduling, atomic claim, delivery outcome
 |   |-- consent_service.py        #   Tokens (single use), decisions, fail-closed ties
 |   |-- consent_page.py           #   Renders the page: language, strings, states
-|   |-- consent_followup.py       #   Queues the WhatsApp reply once consent is recorded
 |   |-- policy_page.py            #   Renders the policy page
 |   |-- knowledge.py, knowledge_corpus.py, knowledge_ingestion.py
 |   |                             #   Documentary base: search, scan, diff, apply
 |   |-- health_fact.py            #   Declared health facts
 |   |-- health_lookup_limit.py    #   Shared budgets for nearest-place lookups
 |   |-- service_miss.py           #   Unrouted-request logging
-|   |-- feedback_service.py       #   Satisfaction answers, cooldown
+|   |-- feedback_service.py       #   Satisfaction answers
 |   |-- stats_service.py          #   Statistics queries
 |   |-- admin_service.py          #   Admin actions and their activity log
 |   |-- bot_auth.py               #   X-Bot-Api-Key verification
@@ -122,7 +108,6 @@ backend/
 |-- models/                       # SQLAlchemy tables, one file per domain
 |   |-- user.py                   #   users (encrypted number, last_inbound_at)
 |   |-- question.py               #   questions (the exchanges)
-|   |-- reminder.py               #   reminders (kind, claim lock, delivery)
 |   |-- consent.py                #   consent_records (decision, token_jti unique)
 |   |-- feedback.py               #   feedback_responses
 |   |-- health_fact.py            #   health_facts
@@ -138,8 +123,7 @@ backend/
 |   |-- anonymity.py              #   pseudo_id, number encryption, masking
 |   |-- health.py                 #   Google Places and geocoding
 |   |-- server_message.py         #   The {error,status,message,data,meta} envelope
-|   |-- email.py                  #   Outbound notification email
-|   `-- timezones.py              #   Timezone from a phone number
+|   `-- email.py                  #   Outbound notification email
 |-- clients/
 |   `-- embeddings.py             #   Embedding calls for the knowledge base
 |
@@ -213,9 +197,6 @@ CONSENT_PAGE_BASE_URL=https://api.example.org
 ADMIN_LOGIN_BUCKET_KEY=replace-with-a-random-64-character-hex-value
 # Keep at zero locally; set to one only behind a reverse-proxy ingress.
 LOGIN_TRUSTED_PROXY_HOPS=0
-# Optional, feedback question timing.
-FEEDBACK_DELAY_MINUTES=30
-FEEDBACK_COOLDOWN_DAYS=7
 ```
 
 Login protection uses PostgreSQL-backed identity and IP counters shared by all
@@ -299,8 +280,8 @@ review. Use the Python the Dockerfile ships, 3.12.
 
 | Audience | Method |
 | --- | --- |
-| Administration (stats, management, reminders, knowledge) | `Authorization: Bearer <JWT>` (from `POST /api/login`) |
-| WhatsApp bot (questions, exchanges, reminders, knowledge search) | `X-Bot-Api-Key: <BOT_API_KEY>` header |
+| Administration (stats, management, knowledge) | `Authorization: Bearer <JWT>` (from `POST /api/login`) |
+| WhatsApp bot (questions, exchanges, knowledge search) | `X-Bot-Api-Key: <BOT_API_KEY>` header |
 | Current user | `GET /api/users/me/` with JWT |
 
 ## Response contract
@@ -325,7 +306,7 @@ CSV downloads use their documented media types instead:
 | --- | --- | --- |
 | `status` | number | HTTP status code mirrored in the body |
 | `error` | boolean | `true` when `status >= 400` |
-| `message` | string | Stable application key (e.g. `USER_CREATED`, `REMINDER_IN_PAST`) |
+| `message` | string | Stable application key (e.g. `USER_CREATED`, `CONSENT_TOKEN_INVALID`) |
 | `data` | object / array / null | Main payload |
 | `meta` | object | Always includes `request_id` and UTC `served_at`, with optional typed context |
 
@@ -393,25 +374,12 @@ violations and never echoes submitted values or exception text.
 | POST | `/api/bot/health-facts` | Declare a health fact | bot |
 | POST | `/api/bot/health-facts/{fact_id}/remove` | Remove a declared health fact | bot |
 | POST | `/api/bot/service-misses` | Log an unrouted request | bot |
-| POST | `/api/bot/reminders` | Create a reminder (`kind`, `message`, `scheduled_at`) | bot |
-| GET | `/api/bot/reminders/due?limit=` | Claim due reminders (each row handed out once) | bot |
-| GET | `/api/bot/users/{pseudo_id}/reminders` | A user's pending reminders | bot |
-| POST | `/api/bot/reminders/cancel-by-pseudo-id` | Cancel a user's reminders | bot |
-| POST | `/api/bot/reminders/{id}/sent` | Mark as sent, body `{wa_message_id}`, idempotent | bot |
-| POST | `/api/bot/reminders/{id}/failed` | Report a failed send, body `{error}` (truncated to 500) | bot |
-| POST | `/api/bot/reminders/delivery-failed` | WhatsApp delivery failure by `wa_message_id` | bot |
-| POST | `/api/bot/reminders/{id}/cancel` | Cancel a reminder | bot |
 | POST | `/api/bot/consent/status` | Consent status, body `{pseudo_id, telnumber}` | bot |
 | POST | `/api/bot/consent/link` | Tokenised consent page link, same body | bot |
-| POST | `/api/bot/feedback/schedule` | Queue the feedback question, `{scheduled}` | bot |
 | POST | `/api/bot/feedback` | Store a feedback answer | bot |
 | GET | `/consent` | Consent web page | public (token) |
 | GET | `/policy` | Policy web page | public |
 | POST | `/api/consent` | Record the consent decision | public (token) |
-| GET | `/api/reminders` | List reminders (filter `status`) | admin |
-| POST | `/api/reminders` | Create a reminder of any kind for an existing user | admin |
-| GET | `/api/reminders/{id}` | Reminder detail | admin |
-| POST | `/api/reminders/{id}/cancel` | Cancel a reminder | admin |
 | GET | `/api/knowledge/documents` | List ingested documents | admin |
 | POST | `/api/knowledge/documents` | Ingest a document | admin |
 | GET | `/api/knowledge/documents/{document_id}` | Document detail | admin |
@@ -454,4 +422,3 @@ pull request; it does not deploy anywhere on its own.
 ## Additional documentation
 
 - [Bot conversation profile](docs/BOT_CONVERSATION_PROFILE.md)
-- [Togo default localisation](docs/TOGO_DEFAULT_LOCALIZATION.md)

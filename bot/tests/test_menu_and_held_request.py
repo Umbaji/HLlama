@@ -6,9 +6,9 @@ from app.services.chat_state import (
     awaiting_her_answer,
     consent_prompt_seen,
     feedback_comment_pending,
+    health_fact_drafts,
     held_request,
     pending_place_category,
-    reminder_drafts,
 )
 from app.utils import consent_gate
 from app.utils.anonymity import pseudo_id_for
@@ -27,7 +27,7 @@ class MenuEntries(unittest.TestCase):
         return sent[0]
 
     def test_every_entry_does_something(self):
-        for number in ("1", "2", "3", "4", "5"):
+        for number in ("1", "2", "3", "4"):
             with self.subTest(number=number):
                 self.assertTrue(self._sent(number))
 
@@ -53,19 +53,19 @@ class MenuEntries(unittest.TestCase):
         self.assertIn("position", json.loads(sent[0])["text"]["body"])
 
     def test_no_entry_tells_her_to_retype_what_she_chose(self):
-        for number in ("1", "2", "3", "4", "5"):
+        for number in ("1", "2", "3", "4"):
             with self.subTest(number=number):
                 payload = self._sent(number)
                 body = payload if isinstance(payload, dict) else json.loads(payload)["text"]["body"]
                 self.assertNotIn("Écrivez «", str(body))
 
     def test_the_numbers_she_may_type(self):
-        for text in ("5", "5.", "5)", " 5 ", "1⃣", "1️⃣"):
+        for text in ("4", "4.", "4)", " 4 ", "1⃣", "1️⃣"):
             with self.subTest(text=text):
                 self.assertIsNotNone(menu.number_in(text))
 
     def test_what_is_not_a_menu_number(self):
-        for text in ("7", "0", "60", "menu", "6 pilules", "", None):
+        for text in ("5", "7", "0", "60", "menu", "6 pilules", "", None):
             with self.subTest(text=text):
                 self.assertIsNone(menu.number_in(text))
 
@@ -203,7 +203,7 @@ class InteractiveMenu(unittest.TestCase):
         ]
         ids = [row["id"] for row in rows]
 
-        self.assertEqual(sorted(ids), [f"{menu.BUTTON_PREFIX}{n}" for n in range(1, 6)])
+        self.assertEqual(sorted(ids), [f"{menu.BUTTON_PREFIX}{n}" for n in range(1, 5)])
         self.assertEqual(len(set(ids)), len(ids))
 
     def test_tapping_an_entry_answers(self):
@@ -212,9 +212,9 @@ class InteractiveMenu(unittest.TestCase):
 
         self.assertTrue(sent[0])
 
-    def test_the_text_fallback_covers_the_five_entries(self):
+    def test_the_text_fallback_covers_the_four_entries(self):
         """Sent when the list is refused, outside the 24h window for instance."""
-        for number in range(1, 6):
+        for number in range(1, 5):
             self.assertIn(f"*{number}.*", menu.TEXT_FALLBACK)
 
 
@@ -232,7 +232,7 @@ class ConsentPrompt(unittest.TestCase):
         self.assertIn("Umbaji", text)
         self.assertIn("libre", text)
 
-    def test_the_reminder_does_not_repeat_the_introduction(self):
+    def test_the_next_ask_does_not_repeat_the_introduction(self):
         consent_gate._prompt_text(WA_ID)
         second = consent_gate._prompt_text(WA_ID)
 
@@ -246,15 +246,15 @@ class ShortcutsYieldToFlows(unittest.TestCase):
     menu choice."""
 
     def setUp(self):
-        reminder_drafts.pop(pseudo_id_for(WA_ID))
+        health_fact_drafts.pop(pseudo_id_for(WA_ID))
         feedback_comment_pending.pop(pseudo_id_for(WA_ID))
 
     def test_nothing_pending_means_the_shortcuts_work(self):
         self.assertFalse(awaiting_her_answer(pseudo_id_for(WA_ID)))
 
-    def test_a_reminder_in_progress_holds_the_floor(self):
-        """Asked for a date, "5" is her answer, not the fifth menu entry."""
-        reminder_drafts.set(pseudo_id_for(WA_ID), {"when": None})
+    def test_a_health_fact_in_progress_holds_the_floor(self):
+        """Asked to confirm a health fact, her answer is not a menu choice."""
+        health_fact_drafts.set(pseudo_id_for(WA_ID), {"fact": "enceinte"})
 
         self.assertTrue(awaiting_her_answer(pseudo_id_for(WA_ID)))
 

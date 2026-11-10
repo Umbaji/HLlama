@@ -45,7 +45,6 @@ what must come out.
 | `bot/tests/test_consent_gate.py` `test_backend_down_fails_closed` | the API cannot be reached | a message arrives | the person gets the "service unavailable" text; nothing reaches the model |
 | `bot/tests/test_consent_gate.py` `test_server_error_and_garbage_fail_closed` | the API answers 500, an empty body, or a status it does not know (`"maybe"`) | the bot checks the consent | the consent is treated as not given |
 | `bot/tests/test_consent_gate.py` `test_phone_is_only_in_the_body` | an accepted consent | the bot asks the API for the status | the phone number is in the JSON body, never in the URL (URLs end up in logs) |
-| `backend/tests/test_reminders.py` `test_due_claims_reminder_once` | one reminder due now | the bot polls `/api/bot/reminders/due` twice | the first poll returns it, with its time zone `Africa/Lome`, in status `sending`; the second returns nothing |
 | `backend/tests/test_migrations.py` `test_the_chain_has_exactly_one_head` | the Alembic migrations | the chain is read | it has one head, or the test names the heads |
 
 A new test reads the same way: its name says what must hold, in a sentence.
@@ -62,7 +61,6 @@ encrypted (`telnumber`).
 | --- | --- | --- |
 | `users` (`UserModel`) | a person, or a member of the team | `is_active`, `deleted_at` once forgotten |
 | `consent_records` (`ConsentRecordModel`) | one consent decision, with the version of the policy it answered | `accepted`, `refused`; the latest one counts |
-| `reminders` (`ReminderModel`) | a reminder: its kind, its message, its date, its repetition | `pending` -> `sending` (claimed by a bot poll) -> `sent` or `failed`; `sent` -> `undelivered`; `cancelled` |
 
 The rest (`feedback`, `health_fact`, `knowledge`, `question`, `service_miss`,
 `activity_log`) follows the same rules: `pseudo_id`, never a clear number.

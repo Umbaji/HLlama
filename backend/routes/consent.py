@@ -9,7 +9,6 @@ from helpers.anonymity import pseudo_id_for
 from helpers.server_message import ServerMessageException, server_message
 from schemas.consent import BotConsentLookup, ConsentResponse, ConsentSubmission
 from services.bot_auth import verify_bot_api_key
-from services.consent_followup import queue_consent_confirmation
 from services.user_service import get_or_create_bot_user
 from services.consent_page import (
     SUPPORTED_LANGUAGES,
@@ -106,10 +105,6 @@ def submit_consent(payload: ConsentSubmission, db: Session = Depends(get_db)):
     except ConsentTokenUsedError:
         raise ServerMessageException("CONSENT_TOKEN_ALREADY_USED")
 
-    # She may never come back to WhatsApp, so the confirmation is pushed rather
-    # than waited for. A refusal is not pushed: the bot stays silent then.
-    if payload.decision == "accepted":
-        queue_consent_confirmation(db, pseudo_id)
     return server_message("CONSENT_RECORDED", data=ConsentResponse.model_validate(record).model_dump())
 
 

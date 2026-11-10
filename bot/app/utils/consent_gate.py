@@ -94,7 +94,7 @@ def get_consent_link(wa_id: str) -> ConsentLinks | None:
 
 
 def _prompt_text(wa_id: str) -> str:
-    """Introduce HLlama the first time, then keep the reminder short."""
+    """Introduce HLlama the first time, then keep the next asks short."""
     pseudo_id = pseudo_id_for(wa_id)
     if consent_prompt_seen.get(pseudo_id):
         return CONSENT_PROMPT_REPEAT_TEXT

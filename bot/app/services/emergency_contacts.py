@@ -138,8 +138,6 @@ def emergency_contact_payload(message: str, wa_id: str = "") -> str | None:
             "target_language": "français",
             "target_format": "text",
             "request_content": "Numéro d’urgence local",
-            "scheduled_at": None,
-            "repeat_interval_days": None,
             "response": response,
         },
         ensure_ascii=False,
