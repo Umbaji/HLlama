@@ -1,7 +1,7 @@
 """WhatsApp Cloud API sending helpers (payload builders + send).
 
-Lives outside `app.utils.whatsapp_utils` so that the reminder agent and the
-webhook routing can send messages without importing the speech stack.
+Lives outside `app.utils.whatsapp_utils` so that the webhook routing can send
+messages without importing the speech stack.
 Requires a Flask app context for the credentials.
 """
 import json
@@ -105,49 +105,6 @@ def build_list_payload(
     }
 
 
-def build_template_payload(
-    recipient: str,
-    template_name: str,
-    language_code: str,
-    named_params: dict | None = None,
-    positional_params: list | None = None,
-    quick_reply_payloads: list[str] | None = None,
-) -> dict:
-    """Approved template message. `named_params` fill {{name}} variables,
-    `positional_params` {{1}}, {{2}}..., and `quick_reply_payloads[i]` is the
-    payload returned when the user taps the i-th quick reply button."""
-    template = {"name": template_name, "language": {"code": language_code}}
-    components = []
-    if named_params:
-        components.append({
-            "type": "body",
-            "parameters": [
-                {"type": "text", "parameter_name": name, "text": value}
-                for name, value in named_params.items()
-            ],
-        })
-    elif positional_params:
-        components.append({
-            "type": "body",
-            "parameters": [{"type": "text", "text": value} for value in positional_params],
-        })
-    for index, payload in enumerate(quick_reply_payloads or []):
-        components.append({
-            "type": "button",
-            "sub_type": "quick_reply",
-            "index": str(index),
-            "parameters": [{"type": "payload", "payload": payload}],
-        })
-    if components:
-        template["components"] = components
-    return {
-        "messaging_product": "whatsapp",
-        "to": recipient,
-        "type": "template",
-        "template": template,
-    }
-
-
 def send_message(data):
     """Sends a message payload (dict or JSON string).
 
@@ -180,36 +137,6 @@ def send_message(data):
     else:
         logging.info("WhatsApp send status: %s", response.status_code)
     return response
-
-
-def send_template_message(
-    recipient: str,
-    template_name: str,
-    language_code: str,
-    named_params: dict | None = None,
-    positional_params: list | None = None,
-    quick_reply_payloads: list[str] | None = None,
-):
-    """Sends an approved template (required outside the 24h service window)."""
-    return send_message(build_template_payload(
-        recipient,
-        template_name,
-        language_code,
-        named_params=named_params,
-        positional_params=positional_params,
-        quick_reply_payloads=quick_reply_payloads,
-    ))
-
-
-def extract_message_id(response) -> str | None:
-    """The `wamid` of a successful send, used to match later status webhooks."""
-    if response is None or getattr(response, "status_code", 500) >= 400:
-        return None
-    try:
-        messages = response.json().get("messages") or []
-        return messages[0].get("id") if messages else None
-    except (ValueError, AttributeError, IndexError):
-        return None
 
 
 def extract_error(response) -> tuple[int | None, str]:

@@ -5,9 +5,8 @@ there. The corpus is in the repository, the base is the result: the ingestion
 runs when the application starts, in the background, so a big corpus never
 keeps the application from answering.
 
-The report is written in a file the application serves: the logs are flooded by
-the polling of the reminders, and a base that is silently empty is the one
-thing nobody must miss.
+The report is written in a file the application serves: the logs are busy,
+and a base that is silently empty is the one thing nobody must miss.
 """
 import logging
 import re

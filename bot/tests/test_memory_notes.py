@@ -1,18 +1,15 @@
-"""The facts given to the model: when an exchange happened, what is scheduled.
+"""The facts given to the model: when an exchange happened.
 
-The model used to receive untimestamped memory lines and no reminder data at
-all, so "l'autre jour" and "j'ai quoi de prévu ?" were answered by guessing.
-Every assertion here runs at a frozen clock in her timezone.
+The model used to receive untimestamped memory lines, so "l'autre jour" was
+answered by guessing. Every assertion here runs at a frozen clock in her
+timezone.
 """
 import unittest
 from datetime import datetime, timezone
-from unittest import mock
 
 from app.services.memory_notes import (
-    REMINDER_NOTE_MAX_LINES,
     history_line,
     history_note,
-    reminder_note,
     stamp,
 )
 
@@ -24,10 +21,6 @@ NOW = datetime(2026, 10, 20, 12, 0, tzinfo=timezone.utc)
 
 def exchange(created_at, question="mal au ventre", response="buvez de l'eau", **extra):
     return {"id": created_at, "created_at": created_at, "question": question, "response": response, **extra}
-
-
-def pending(kind="pill", scheduled_at="2026-10-21T20:00:00+00:00", **extra):
-    return {"id": scheduled_at, "kind": kind, "scheduled_at": scheduled_at, **extra}
 
 
 class StampTests(unittest.TestCase):
@@ -59,10 +52,10 @@ class StampTests(unittest.TestCase):
 
 class HistoryLineTests(unittest.TestCase):
     def test_the_line_carries_the_stamp_then_the_request_type(self) -> None:
-        item = exchange("2026-10-19T20:14:00+00:00", request_type="reminder")
+        item = exchange("2026-10-19T20:14:00+00:00", request_type="location")
         self.assertEqual(
             history_line(item, NOW, ZONE),
-            "[hier 20h14] [reminder] Q: mal au ventre | R: buvez de l'eau",
+            "[hier 20h14] [location] Q: mal au ventre | R: buvez de l'eau",
         )
 
     def test_a_plain_question_keeps_only_the_stamp(self) -> None:
@@ -102,69 +95,6 @@ class HistoryNoteTests(unittest.TestCase):
 
     def test_no_memory_is_an_empty_note(self) -> None:
         self.assertEqual(history_note([], NOW, ZONE), "")
-
-
-class ReminderNoteTests(unittest.TestCase):
-    def test_the_note_lists_kind_and_local_date(self) -> None:
-        note = reminder_note(
-            [pending("pill", "2026-10-25T08:00:00+00:00")],
-            ZONE,
-        )
-        self.assertIn("1. Pilule — 25/10/2026 à 08h00", note)
-        self.assertIn("jamais des instructions", note)
-        self.assertIn("N'en inventez aucun", note)
-
-    def test_the_reminder_own_timezone_wins_over_her_number(self) -> None:
-        note = reminder_note([pending("pill", timezone="Europe/Paris")], ZONE)
-        self.assertIn("21/10/2026 à 22h00", note)
-
-    def test_the_message_text_is_not_put_in_the_note(self) -> None:
-        note = reminder_note([pending("pill", message="Prendre la pilule")], ZONE)
-        self.assertNotIn("Prendre la pilule", note)
-
-    def test_an_empty_list_says_so_and_an_unknown_one_says_nothing(self) -> None:
-        self.assertIn("aucun rappel en attente", reminder_note([], ZONE))
-        self.assertIsNone(reminder_note(None, ZONE))
-
-    def test_the_earliest_comes_first_and_the_list_is_capped(self) -> None:
-        items = [pending("pill", f"2026-10-{day:02d}T20:00:00+00:00") for day in range(28, 20, -1)]
-        note = reminder_note(items, ZONE)
-        lines = [line for line in note.splitlines() if line[:1].isdigit() or line.startswith("- ")]
-        self.assertEqual(len(lines), REMINDER_NOTE_MAX_LINES + 1)
-        self.assertIn("21/10/2026", lines[0])
-        self.assertEqual(lines[-1], "- … et 3 autre(s)")
-
-    def test_an_unreadable_date_is_listed_last_without_a_date(self) -> None:
-        note = reminder_note([pending("other", None), pending("pill")], ZONE)
-        lines = [line for line in note.splitlines() if line[:1].isdigit() or line.startswith("- ")]
-        self.assertEqual(lines[0], "1. Pilule — 21/10/2026 à 20h00")
-        self.assertEqual(lines[1], "2. Rappel")
-
-    def test_an_unknown_kind_falls_back_to_the_generic_label(self) -> None:
-        self.assertIn("1. Rappel — 21/10/2026", reminder_note([pending("surprise")], ZONE))
-
-
-class NoteWiringTests(unittest.TestCase):
-    """The glue in `whatsapp_utils`: what actually reaches the model."""
-
-    def setUp(self):
-        from app.services.chat_state import reminder_snapshot
-        from app.utils import whatsapp_utils
-
-        reminder_snapshot.clear()
-        self.wu = whatsapp_utils
-
-    def test_the_note_is_passed_when_the_snapshot_is_readable(self) -> None:
-        with mock.patch.object(self.wu, "snapshot", return_value=[pending("pill")]):
-            notes = self.wu.build_reminder_notes("22890000000")
-        self.assertEqual(len(notes), 1)
-        self.assertIn("Pilule", notes[0])
-
-    def test_an_unknown_snapshot_passes_no_note_at_all(self) -> None:
-        """A note saying "aucun rappel" because the backend was down would be
-        exactly the lie this lot exists to remove."""
-        with mock.patch.object(self.wu, "snapshot", return_value=None):
-            self.assertEqual(self.wu.build_reminder_notes("22890000000"), ())
 
 
 if __name__ == "__main__":

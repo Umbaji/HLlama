@@ -3,7 +3,7 @@ Interface Gradio légère pour tester le system_prompt.txt en local,
 sans importer whatsapp_utils.py (évite de charger Whisper/TTS/speechbrain).
 
 Installation minimale :
-    pip install openai gradio python-dotenv dateparser
+    pip install openai gradio python-dotenv
 
 Lancement :
     python scripts/test_system_prompt.py
@@ -13,8 +13,8 @@ Nécessite un fichier .env (à la racine de bot/) avec :
     AZURE_OPENAI_API_KEY=...
     DEPLOYMENT_NAME=...
 
-Les conversations et le suivi de cycle sont stockés dans data/conversation_state.json
-(non commité — cf. cycle_tracking.py). La localisation réelle (partage GPS WhatsApp)
+Les conversations sont stockées dans data/conversation_state.json
+(non commité — cf. conversation_store.py). La localisation réelle (partage GPS WhatsApp)
 n'est pas simulable ici : pour location_request/pharmacy_on_duty, ce script montre
 seulement que le bon routage est déclenché, pas le calcul de la pharmacie la plus proche.
 """
@@ -22,14 +22,13 @@ seulement que le bon routage est déclenché, pas le calcul de la pharmacie la p
 import json
 import os
 import re
-from datetime import datetime
 from pathlib import Path
 
 import gradio as gr
 from dotenv import load_dotenv
 from openai import OpenAI
 
-import cycle_tracking
+import conversation_store
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(ROOT_DIR / ".env")
@@ -97,50 +96,13 @@ def respond(message, history):
     raw = response.choices[0].message.content
     data = parse_structured_response(raw)
 
-    state = cycle_tracking.load_state()
-    cycle_tracking.append_message(state, TEST_USER_ID, "user", message)
+    state = conversation_store.load_state()
+    conversation_store.append_message(state, TEST_USER_ID, "user", message)
 
-    request_type = data.get("request_type") if data else None
+    display_text = extract_display_text(raw, data) if data else raw
 
-    if request_type == "cycle_log":
-        # On met le cycle en attente : rien n'est confirme tant qu'elle n'a pas
-        # explicitement accepte le rappel (cf. reminder_confirmation ci-dessous).
-        date_expression = data.get("request_content", "aujourd'hui")
-        cycle = cycle_tracking.stage_period_start(state, TEST_USER_ID, date_expression)
-        natural_reply = data.get("response", "Merci de me le dire, je note ça.")
-        date_fr = datetime.fromisoformat(cycle["next_expected_date"]).strftime("%d/%m/%Y")
-        display_text = (
-            f"{natural_reply} Je peux t'envoyer un petit rappel autour du {date_fr} "
-            "pour tes prochaines règles, ça te va ? (réponds oui ou non)"
-        )
-
-    elif request_type == "reminder_confirmation":
-        decision = data.get("request_content", "")
-        natural_reply = data.get("response", "C'est noté.")
-        if decision == "accept":
-            cycle = cycle_tracking.confirm_pending_cycle(state, TEST_USER_ID)
-            if cycle:
-                preview = cycle_tracking.render_reminder_preview(cycle["next_expected_date"])
-                # En prod, ce rappel partirait un autre jour (via le scheduler). Pour la
-                # demo, on l'affiche tout de suite, clairement etiquete comme simulation.
-                display_text = (
-                    f"{natural_reply}\n\n"
-                    "---\n"
-                    f"🔔 *Simulation démo — ce rappel serait normalement envoyé le {cycle['next_expected_date']}, "
-                    "pas maintenant :*\n\n"
-                    f"{preview}"
-                )
-            else:
-                display_text = natural_reply  # pas de rappel en attente : rien a confirmer
-        else:
-            cycle_tracking.decline_pending_cycle(state, TEST_USER_ID)
-            display_text = natural_reply
-
-    else:
-        display_text = extract_display_text(raw, data) if data else raw
-
-    cycle_tracking.append_message(state, TEST_USER_ID, "assistant", display_text)
-    cycle_tracking.save_state(state)
+    conversation_store.append_message(state, TEST_USER_ID, "assistant", display_text)
+    conversation_store.save_state(state)
 
     return display_text
 
@@ -151,7 +113,7 @@ if __name__ == "__main__":
         title="HLlama - Test du system prompt",
         description=(
             f"Prompt chargé depuis {SYSTEM_PROMPT_PATH.relative_to(ROOT_DIR)} (relu à chaque envoi). "
-            f"Conversations et cycle stockés dans {cycle_tracking.STATE_PATH.relative_to(ROOT_DIR)}."
+            f"Conversations stockées dans {conversation_store.STATE_PATH.relative_to(ROOT_DIR)}."
         ),
     )
     demo.launch()

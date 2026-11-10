@@ -1,19 +1,9 @@
-"""Routes button replies whose id carries a bot action (FB:, RMD:, RMP:,
-RMU:, REM:CANCEL:).
+"""Routes button replies whose id carries a bot action (MENU:, FB:, FAC:).
 
 Both kinds of WhatsApp buttons end up here: interactive reply buttons
 (`interactive.button_reply.id`) and template quick replies (`button.payload`).
 """
-from app.services import (
-    feedback,
-    health_fact_flow,
-    menu,
-    reminder_flow,
-    reminder_status,
-    reminder_update,
-)
-from app.services.chat_state import reminder_detail_pending
-from app.utils.anonymity import pseudo_id_for
+from app.services import feedback, health_fact_flow, menu
 
 
 def extract_button_id(message: dict) -> str | None:
@@ -37,17 +27,9 @@ def route_button_reply(wa_id: str, button_id: str | None, send) -> bool:
         handler = menu.handle_menu_button
     elif button_id.startswith("FB:"):
         handler = feedback.handle_feedback_button
-    elif button_id.startswith(reminder_flow.BUTTON_PREFIX):
-        handler = reminder_flow.handle_button
     elif button_id.startswith(health_fact_flow.BUTTON_PREFIX):
         handler = health_fact_flow.handle_button
-    elif button_id.startswith(reminder_update.BUTTON_PREFIX):
-        handler = reminder_update.handle_button
-    elif button_id.startswith("REM:CANCEL:"):
-        handler = reminder_status.handle_button
     else:
         return False
-    # The button answers the reminder itself, its pending detail is now moot.
-    reminder_detail_pending.pop(pseudo_id_for(wa_id))
     handler(wa_id, button_id, send)
     return True

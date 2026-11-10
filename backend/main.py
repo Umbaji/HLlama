@@ -38,7 +38,6 @@ from routes import (
     stats_router,
     management_router,
     bot_router,
-    reminders_router,
     monitoring_router,
     consent_router,
     knowledge_router,
@@ -108,7 +107,7 @@ app = FastAPI(
         "Backend API for the HLlama connected-health platform, the sexual and "
         "reproductive health assistant built by Umbaji.\n\n"
         "This REST API is consumed by the admin dashboard (Next.js) and the WhatsApp "
-        "bot (webhook/reminders).\n\n"
+        "bot (webhook).\n\n"
         "## Authentication\n\n"
         "- Admin endpoints: `Authorization: Bearer <token>` header (JWT from "
         "`POST /api/login`).\n"
@@ -123,14 +122,7 @@ app = FastAPI(
         "- `message`: stable application key (e.g. USER_CREATED, UNAUTHORIZED_ACCESS)\n"
         "- `data`: main payload (object, array, or null)\n"
         "- `meta`: always includes `request_id` and UTC `served_at`; pagination "
-        "and domain context are additive\n\n"
-        "## Reminders\n\n"
-        "Reminders are stored with a timezone derived from the phone number "
-        "(default `Africa/Lome`). A past date is rejected with "
-        "`REMINDER_IN_PAST`. The WhatsApp bot polls `GET /api/bot/reminders/due`, "
-        "which claims each due reminder for one poller only (status `sending`), then "
-        "reports it as `sent`/`failed`, or `undelivered` through "
-        "`POST /api/bot/reminders/delivery-failed`.\n"
+        "and domain context are additive\n"
     ),
     openapi_tags=[
         {"name": "auth", "description": "Authentication and JWT token issuance."},
@@ -140,8 +132,7 @@ app = FastAPI(
         {"name": "health", "description": "API health and nearby healthcare place lookup (Google Maps)."},
         {"name": "stats", "description": "Activity statistics for the dashboard (admin)."},
         {"name": "management", "description": "Admin actions: activation, promotion, moderation, CSV exports."},
-        {"name": "bot", "description": "Endpoints used by the WhatsApp bot (exchanges, reminders, history)."},
-        {"name": "reminders", "description": "Reminder management (admin)."},
+        {"name": "bot", "description": "Endpoints used by the WhatsApp bot (exchanges, history)."},
         {"name": "monitoring", "description": "Service and dependency health, Umbaji Monitoring Standard 1.0 (dedicated key)."},
         {"name": "consent", "description": "Consent page and API, opened from a WhatsApp template URL button."},
     ],
@@ -303,7 +294,6 @@ app.include_router(health_router)
 app.include_router(stats_router)
 app.include_router(management_router)
 app.include_router(bot_router)
-app.include_router(reminders_router)
 app.include_router(knowledge_router)
 app.include_router(service_misses_bot_router)
 app.include_router(service_misses_admin_router)

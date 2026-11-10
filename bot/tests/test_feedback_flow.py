@@ -6,7 +6,6 @@ from app.services import button_router, feedback
 from app.services.chat_state import (
     feedback_comment_asked,
     feedback_comment_pending,
-    reminder_detail_pending,
 )
 from app.utils.anonymity import pseudo_id_for
 
@@ -28,7 +27,7 @@ def texts(send):
 
 class FeedbackFlowTests(unittest.TestCase):
     def setUp(self):
-        for store in (feedback_comment_asked, feedback_comment_pending, reminder_detail_pending):
+        for store in (feedback_comment_asked, feedback_comment_pending):
             store.clear()
         self.posts = []
         patcher = mock.patch.object(
@@ -79,12 +78,6 @@ class FeedbackFlowTests(unittest.TestCase):
                 button_router.route_button_reply(WA_ID, button_id, send)
         self.assertEqual(self.posts, [])
         send.assert_not_called()
-
-    def test_schedule_is_fire_and_forget_with_short_timeout(self):
-        feedback.schedule_feedback(WA_ID, background=False)
-        self.assertEqual(self.posts, [("/api/bot/feedback/schedule", {
-            "pseudo_id": pseudo_id_for(WA_ID), "telnumber": WA_ID,
-        })])
 
     def test_an_unknown_button_is_left_to_the_caller(self):
         self.assertFalse(button_router.route_button_reply(WA_ID, "XX:1", mock.Mock()))

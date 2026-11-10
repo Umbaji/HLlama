@@ -67,7 +67,7 @@ class ConversationResponseTests(unittest.TestCase):
         return_value=ScopeDecision.ALLOWED,
     )
     def test_a_trusted_note_precedes_the_untrusted_history(self, classify: Mock) -> None:
-        """Her reminders are a fact the application vouches for; the recalled
+        """Her health facts are a fact the application vouches for; the recalled
         history is not. The order in the prompt says which is which."""
         client = Mock()
         client.chat.completions.create.return_value.choices = [
@@ -76,19 +76,19 @@ class ConversationResponseTests(unittest.TestCase):
         generate_structured_response(
             client,
             "test-model",
-            "J'ai quoi de prévu ?",
+            "Et pour ma grossesse ?",
             "HLlama system",
             "Clock",
             context="Old exchange",
-            notes=("Fiche application — ses rappels", ""),
+            notes=("Fiche application — ses données de santé", ""),
         )
         contents = [
             message["content"]
             for message in client.chat.completions.create.call_args.kwargs["messages"]
         ]
-        self.assertEqual(contents[2], "Fiche application — ses rappels")
+        self.assertEqual(contents[2], "Fiche application — ses données de santé")
         self.assertIn("Old exchange", contents[3])
-        self.assertEqual(contents[-1], "J'ai quoi de prévu ?")
+        self.assertEqual(contents[-1], "Et pour ma grossesse ?")
 
     @patch(
         "app.services.conversation_response.classify_scope",

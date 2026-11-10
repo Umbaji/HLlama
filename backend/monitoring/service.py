@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from sqlalchemy import text
@@ -19,7 +19,6 @@ from database import engine
 from monitoring.contract import (
     CONTRACT_VERSION,
     Indicator,
-    Threshold,
     roll_up_status,
     run_probe,
 )
@@ -110,18 +109,10 @@ def _collect_indicators() -> list[Indicator]:
     """Service level indicators, read from the data the service already keeps."""
     try:
         with engine.connect() as connection:
-            since = datetime.now(timezone.utc) - timedelta(hours=24)
             users = connection.execute(text("SELECT COUNT(*) FROM users")).scalar()
-            recent = connection.execute(
-                text(
-                    "SELECT COUNT(*) FROM reminders "
-                    "WHERE status = 'failed' AND created_at > :since"
-                ),
-                {"since": since},
-            ).scalar()
     except Exception:
         # Null rather than zero: an unavailable count is not a healthy count.
-        users, recent = None, None
+        users = None
 
     return [
         Indicator(
@@ -130,12 +121,5 @@ def _collect_indicators() -> list[Indicator]:
             value=None if users is None else float(users),
             unit="count",
             threshold=None,
-        ),
-        Indicator(
-            key="failed_reminders_24h",
-            name="Failed reminders (24 h)",
-            value=None if recent is None else float(recent),
-            unit="count",
-            threshold=Threshold(warning=10, critical=50),
         ),
     ]

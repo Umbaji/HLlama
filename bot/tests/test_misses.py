@@ -13,8 +13,8 @@ from app.services import misses
 class ScrubTests(unittest.TestCase):
     def test_the_digits_are_removed(self):
         self.assertEqual(
-            misses.scrub("rappelle le 90000102 pour 5000 francs"),
-            "rappelle le # pour # francs",
+            misses.scrub("traduis le 90000102 pour 5000 francs"),
+            "traduis le # pour # francs",
         )
 
     def test_the_links_and_the_emails_are_removed(self):
@@ -42,20 +42,20 @@ class LogTests(unittest.TestCase):
         with mock.patch(
             "app.services.misses.post_json", return_value=mock.Mock(status_code=201)
         ) as post:
-            misses.log_miss("rappelle le 90000102", "reminder")
+            misses.log_miss("traduis le 90000102", "translation")
 
         path, payload = post.call_args.args[0], post.call_args.args[1]
         self.assertEqual(path, "/api/bot/service-misses")
-        self.assertEqual(payload["wording"], "rappelle le #")
-        self.assertEqual(payload["service"], "reminder")
+        self.assertEqual(payload["wording"], "traduis le #")
+        self.assertEqual(payload["service"], "translation")
 
     def test_a_failure_is_never_raised(self):
         with mock.patch("app.services.misses.post_json", return_value=None):
-            misses.log_miss("rappelle", "reminder")
+            misses.log_miss("traduis", "translation")
 
     def test_an_empty_wording_is_not_sent(self):
         with mock.patch("app.services.misses.post_json") as post:
-            misses.log_miss("   ", "reminder")
+            misses.log_miss("   ", "translation")
         post.assert_not_called()
 
 

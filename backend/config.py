@@ -19,7 +19,6 @@ class Settings(BaseSettings):
     LOGIN_TRUSTED_PROXY_HOPS: int = Field(default=0, ge=0, le=1)
     GOOGLE_API_KEY: str | None = None
     BOT_API_KEY: str | None = None
-    DEFAULT_REMINDER_TIMEZONE: str = "Africa/Lome"
     ALLOWED_ORIGINS: str = "http://localhost:3000"
     DEBUG: bool = False
     # No defaults on purpose: a publicly known value would let anyone derive
@@ -30,8 +29,6 @@ class Settings(BaseSettings):
     # The bot matches the confirmation message sent back from the consent page,
     # so this number must be the one the bot answers on.
     CONSENT_WHATSAPP_NUMBER: str = "00000000000"
-    FEEDBACK_DELAY_MINUTES: int = Field(default=30, ge=0)
-    FEEDBACK_COOLDOWN_DAYS: int = Field(default=7, ge=0)
     # Spec 002: the retention period the consent page states (section 6). The
     # sweep logs what it would touch while RETENTION_DRY_RUN is true; read those
     # numbers in production before turning it off.

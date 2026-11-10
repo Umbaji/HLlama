@@ -1,35 +1,24 @@
-"""What she sees right after accepting the consent form, and queued notices.
+"""What she sees right after accepting the consent form.
 
 Seen in production: she wrote "Hello", accepted the form, then wrote her real
-request. The bot replayed "Hello" (answered in English), then handled the
-request, and only then said "Merci, votre consentement est bien enregistré",
-delivered by the thirty-second reminder poll.
+request. The bot replayed "Hello" (answered in English) before handling the
+request.
 """
 import json
 import unittest
 from unittest import mock
 
-from app.services import consent_hold, pending_notices, reminder_status
-from app.services.chat_state import consent_gated, held_request
+from app.services import consent_hold
+from app.services.chat_state import held_request
 from app.utils.anonymity import pseudo_id_for
 
 WA_ID = "22890000000"
 PSEUDO = pseudo_id_for(WA_ID)
 CONFIRMATIONS = ("J'ai donne mon consentement ✅",)
-CONSENT_NOTICE = "Merci, votre consentement est bien enregistré."
 
 
 def text(body):
     return {"type": "text", "text": {"body": body}}
-
-
-def bodies(send):
-    out = []
-    for call in send.call_args_list:
-        payload = call.args[0]
-        payload = json.loads(payload) if isinstance(payload, str) else payload
-        out.append(payload.get("text", {}).get("body") or payload.get("type"))
-    return out
 
 
 class SmallTalkIsNotARequest(unittest.TestCase):
@@ -61,48 +50,6 @@ class SmallTalkIsNotARequest(unittest.TestCase):
                 self.assertFalse(consent_hold.supersedes(message, CONFIRMATIONS))
 
 
-class DeliverNow(unittest.TestCase):
-    def setUp(self):
-        self.cancelled = []
-        self.cancel_ok = True
-        self.reminders = []
-        patches = (
-            mock.patch.object(reminder_status, "fetch_user_reminders", side_effect=lambda *_a, **_k: self.reminders),
-            mock.patch.object(reminder_status, "cancel_user_reminder", side_effect=self._cancel),
-        )
-        for patcher in patches:
-            patcher.start()
-            self.addCleanup(patcher.stop)
-
-    def _cancel(self, _wa_id, reminder_id):
-        self.cancelled.append(reminder_id)
-        return {"id": reminder_id} if self.cancel_ok else None
-
-    def test_pending_notices_are_sent_and_taken_out_of_the_queue(self):
-        self.reminders = [
-            {"id": "n1", "kind": "notice", "status": "pending", "message": CONSENT_NOTICE},
-            {"id": "c1", "kind": "cycle", "status": "pending", "message": "Rappel"},
-            {"id": "n2", "kind": "notice", "status": "sending", "message": "déjà pris"},
-        ]
-        send = mock.Mock()
-
-        self.assertEqual(pending_notices.deliver_now(WA_ID, send), 1)
-        self.assertEqual(self.cancelled, ["n1"])
-        self.assertEqual(bodies(send), [CONSENT_NOTICE])
-
-    def test_a_notice_the_poller_won_is_not_sent_twice(self):
-        self.reminders = [{"id": "n1", "kind": "notice", "status": "pending", "message": CONSENT_NOTICE}]
-        self.cancel_ok = False
-        send = mock.Mock()
-
-        self.assertEqual(pending_notices.deliver_now(WA_ID, send), 0)
-        send.assert_not_called()
-
-    def test_an_unreadable_backend_is_reported(self):
-        self.reminders = None
-        self.assertIsNone(pending_notices.deliver_now(WA_ID, mock.Mock()))
-
-
 class AfterTheForm(unittest.TestCase):
     """The order of what she receives on her first message after accepting."""
 
@@ -111,7 +58,6 @@ class AfterTheForm(unittest.TestCase):
 
         self.wu = whatsapp_utils
         held_request.clear()
-        consent_gated.clear()
         self.events = []
         self.gate = None
         patches = (
@@ -119,11 +65,6 @@ class AfterTheForm(unittest.TestCase):
             mock.patch.object(whatsapp_utils, "send_message", side_effect=self._send),
             mock.patch.object(whatsapp_utils, "process_text_message", side_effect=self._handle),
             mock.patch.object(whatsapp_utils, "route_button_reply", return_value=False),
-            mock.patch.object(
-                whatsapp_utils.pending_notices,
-                "deliver_now",
-                side_effect=lambda *_a: self.events.append(("notice", CONSENT_NOTICE)) or 1,
-            ),
         )
         for patcher in patches:
             patcher.start()
@@ -151,7 +92,6 @@ class AfterTheForm(unittest.TestCase):
         self._receive(text("Je veux envoyer de l'argent à ma mère"))
 
         self.assertEqual(self.events, [
-            ("notice", CONSENT_NOTICE),
             ("handle", "Je veux envoyer de l'argent à ma mère"),
         ])
 
@@ -163,20 +103,8 @@ class AfterTheForm(unittest.TestCase):
 
         self._receive(text("c'est fait"))
 
-        self.assertEqual(self.events[0], ("notice", CONSENT_NOTICE))
         self.assertIn(("handle", "J'ai mal au ventre depuis hier"), self.events)
         self.assertEqual(self.events[-1], ("handle", "c'est fait"))
-
-    def test_the_confirmation_goes_out_once_only(self):
-        self.gate = json.dumps({"type": "interactive"})
-        self._receive(text("Hello"))
-        self.gate = None
-        self._receive(text("première question"))
-        self.events.clear()
-
-        self._receive(text("deuxième question"))
-
-        self.assertEqual(self.events, [("handle", "deuxième question")])
 
 
 if __name__ == "__main__":

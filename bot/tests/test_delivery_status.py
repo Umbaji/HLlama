@@ -34,10 +34,6 @@ FAILED = {
 DELIVERED = {"id": "wamid.OK", "status": "delivered", "recipient_id": "22890000000"}
 
 
-class FakeResponse:
-    status_code = 200
-
-
 class DeliveryStatusTests(unittest.TestCase):
     def test_only_failed_statuses_are_reported_without_pii(self):
         reports = delivery_status.failed_deliveries(status_event(DELIVERED, FAILED))
@@ -48,13 +44,10 @@ class DeliveryStatusTests(unittest.TestCase):
         }])
         self.assertNotIn("22890000000", json.dumps(reports))
 
-    def test_posts_to_delivery_failed(self):
-        with mock.patch.object(delivery_status, "post_json", return_value=FakeResponse()) as post, \
-                self.assertLogs(level="WARNING") as logs:
-            self.assertEqual(delivery_status.report_delivery_failures(status_event(FAILED)), 1)
-        post.assert_called_once_with("/api/bot/reminders/delivery-failed", {
-            "wa_message_id": "wamid.FAIL", "error_code": 131047, "error_title": "Re-engagement message",
-        })
+    def test_failures_are_logged_without_pii(self):
+        with self.assertLogs(level="WARNING") as logs:
+            self.assertEqual(delivery_status.log_delivery_failures(status_event(FAILED)), 1)
+        self.assertIn("131047", "\n".join(logs.output))
         self.assertNotIn("22890000000", "\n".join(logs.output))
 
     def test_malformed_bodies_are_harmless(self):
@@ -94,20 +87,17 @@ class StatusWebhookTests(unittest.TestCase):
             headers={"X-Hub-Signature-256": f"sha256={signature}"},
         )
 
-    def test_failed_status_triggers_delivery_failed_report(self):
-        with mock.patch("threading.Thread") as thread:
+    def test_failed_status_is_logged_and_acknowledged(self):
+        with self.assertLogs(level="WARNING") as logs:
             response = self.post(status_event(FAILED))
         self.assertEqual(response.status_code, 200)
-        thread.assert_called_once()
-        kwargs = thread.call_args.kwargs
-        self.assertIs(kwargs["target"], delivery_status.report_delivery_failures)
-        thread.return_value.start.assert_called_once()
+        self.assertIn("WhatsApp delivery failed", "\n".join(logs.output))
 
     def test_other_statuses_are_acknowledged_silently(self):
-        with mock.patch("threading.Thread") as thread:
+        with mock.patch.object(delivery_status.logging, "warning") as warning:
             response = self.post(status_event(DELIVERED))
         self.assertEqual(response.status_code, 200)
-        thread.assert_not_called()
+        warning.assert_not_called()
 
 
 if __name__ == "__main__":

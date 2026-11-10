@@ -38,7 +38,6 @@ SECTIONS = [
     ]),
     ("Vous accompagner", [
         (f"{BUTTON_PREFIX}3", "Trouver un lieu", "La pharmacie de garde ou la clinique la plus proche"),
-        (f"{BUTTON_PREFIX}5", "Créer un rappel", "Cycle, pilule, injection, rendez-vous"),
     ]),
 ]
 
@@ -52,11 +51,6 @@ PROMPTS = {
         "IST, hygiène... Je réponds simplement et sans jugement."
     ),
     "2": "Quel message dois-je traduire, et dans quelle langue ?",
-    "5": (
-        "Que dois-je vous rappeler, et quand ?\n"
-        "\n"
-        "Par exemple : _ma pilule tous les jours à 8h_, ou _mon rendez-vous le 12 octobre à 10h_."
-    ),
 }
 
 PLACE_QUESTION = "Quel lieu cherchez-vous ?"
@@ -88,14 +82,11 @@ TEXT_FALLBACK = (
     "*4.* Obtenir les numéros verts\n"
     "_violences, protection de l'enfance, santé sexuelle_\n"
     "\n"
-    "*5.* Créer un rappel\n"
-    "_cycle, pilule, injection, rendez-vous_\n"
-    "\n"
     "Répondez par un numéro, ou écrivez simplement votre question."
 )
 
-# "5", "5.", "5)" and the keycap emoji WhatsApp offers when she taps the menu.
-_NUMBER = re.compile(r"^([1-5])️?⃣?[ .)-]*$")
+# "4", "4.", "4)" and the keycap emoji WhatsApp offers when she taps the menu.
+_NUMBER = re.compile(r"^([1-4])️?⃣?[ .)-]*$")
 
 
 def build_payload(wa_id: str) -> dict:

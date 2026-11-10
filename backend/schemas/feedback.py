@@ -6,11 +6,6 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 MAX_ANSWER_LENGTH = 500
 
 
-class FeedbackScheduleRequest(BaseModel):
-    pseudo_id: str = Field(min_length=1, max_length=64)
-    telnumber: str = Field(min_length=7, max_length=32)
-
-
 class FeedbackCreate(BaseModel):
     pseudo_id: str = Field(min_length=1, max_length=64)
     question_key: str = Field(pattern=r"^[a-z0-9_]{1,50}$")
@@ -40,9 +35,3 @@ class FeedbackResponse(BaseModel):
     rating: int | None = None
     answer: str | None = None
     created_at: datetime
-
-
-class FeedbackScheduleResponse(BaseModel):
-    model_config = ConfigDict(extra="forbid", strict=True)
-
-    scheduled: bool

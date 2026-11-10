@@ -6,7 +6,7 @@ built by Umbaji. Its three parts live in this repository:
 | Directory | What it holds |
 | --- | --- |
 | `bot/` | the WhatsApp bot: the flows, the prompt, the tests |
-| `backend/` | the API: the exchanges, the reminders, the documentary base |
+| `backend/` | the API: the exchanges, the consent, the documentary base |
 | `admin/` | the backoffice: the users, the questions, the corpus, the feedback |
 
 A change that crosses two parts (a payload between the bot and the API, say)
