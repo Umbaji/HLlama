@@ -133,6 +133,14 @@ class ConversationScopeTests(unittest.TestCase):
         self.assertEqual(payload["request_type"], "question")
         self.assertFalse(contains_instruction_attack("J'oublie de prendre ma pilule"))
 
+    def test_the_redirect_carries_every_field_of_the_contract(self) -> None:
+        payload = json.loads(out_of_scope_payload("bonjour"))
+
+        self.assertEqual(
+            set(payload),
+            {"request_type", "target_language", "target_format", "request_content", "response"},
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
