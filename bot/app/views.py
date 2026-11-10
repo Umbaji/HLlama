@@ -6,11 +6,7 @@ import threading
 from flask import Blueprint, request, jsonify, current_app
 
 from .decorators.security import signature_required
-from .services.delivery_status import (
-    failed_deliveries,
-    has_statuses,
-    report_delivery_failures,
-)
+from .services.delivery_status import has_statuses, log_delivery_failures
 from .services.webhook_target import event_targets_configured_phone
 from .utils.whatsapp_utils import (
     process_whatsapp_message,
@@ -73,11 +69,7 @@ def handle_message():
 
     # Check if it's a WhatsApp status update (sent / delivered / read / failed)
     if has_statuses(body):
-        if failed_deliveries(body):
-            # Reported off the request path: Meta retries slow webhooks.
-            threading.Thread(
-                target=report_delivery_failures, args=(body,), daemon=True
-            ).start()
+        log_delivery_failures(body)
         return jsonify({"status": "ok"}), 200
 
     try:

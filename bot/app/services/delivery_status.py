@@ -1,12 +1,10 @@
-"""WhatsApp `statuses` webhook events -> backend delivery-failed reports.
+"""WhatsApp `statuses` webhook events -> delivery failure logs.
 
 A send accepted by the API can still fail later (e.g. 131047, window closed,
 or an unapproved template). Meta reports it asynchronously as a status event;
-the backend marks the matching reminder `undelivered`.
+the bot logs it, without the recipient.
 """
 import logging
-
-from app.services.backend_client import post_json
 
 _TITLE_MAX = 200
 
@@ -27,8 +25,8 @@ def has_statuses(body: dict) -> bool:
 
 
 def failed_deliveries(body: dict) -> list[dict]:
-    """Backend payloads for every `failed` status. `recipient_id` and the
-    free-form error details are dropped on purpose (phone number / PII)."""
+    """One report for every `failed` status. `recipient_id` and the free-form
+    error details are dropped on purpose (phone number / PII)."""
     reports = []
     for status in iter_statuses(body):
         if status.get("status") != "failed" or not status.get("id"):
@@ -44,14 +42,9 @@ def failed_deliveries(body: dict) -> list[dict]:
     return reports
 
 
-def report_delivery_failures(body: dict) -> int:
-    """Posts each failed delivery to the backend; returns how many were sent."""
-    reported = 0
-    for payload in failed_deliveries(body):
+def log_delivery_failures(body: dict) -> int:
+    """Logs each failed delivery; returns how many there were."""
+    reports = failed_deliveries(body)
+    for payload in reports:
         logging.warning("WhatsApp delivery failed (code %s).", payload["error_code"])
-        response = post_json("/api/bot/reminders/delivery-failed", payload)
-        if response is not None and response.status_code < 400:
-            reported += 1
-        else:
-            logging.error("delivery-failed report was not accepted by the backend.")
-    return reported
+    return len(reports)

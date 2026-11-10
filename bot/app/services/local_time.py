@@ -1,15 +1,13 @@
 """Her local wall-clock time, derived from her WhatsApp number.
 
-Mirrors the backend's helpers/timezones.py so a naive local date-time sent to
-the backend is read back as the same wall-clock moment. Lives in services, not
-in whatsapp_utils, so anything that needs "now, where she is" can import it
-without pulling torch in.
+Lives in services, not in whatsapp_utils, so anything that needs "now, where
+she is" can import it without pulling torch in.
 """
 import os
 from datetime import datetime, timezone, tzinfo
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-DEFAULT_ZONE_ENV = "DEFAULT_REMINDER_TIMEZONE"
+DEFAULT_ZONE_ENV = "DEFAULT_TIMEZONE"
 FALLBACK_ZONE = "Africa/Lome"
 
 
@@ -59,8 +57,3 @@ def zone_name_for_wa_id(wa_id: str) -> str:
     except Exception:
         pass
     return default_zone
-
-
-def now_local(wa_id: str = "") -> datetime:
-    """Naive local date-time where she is, for parsing and for comparisons."""
-    return datetime.now(zone(zone_name_for_wa_id(wa_id))).replace(tzinfo=None)

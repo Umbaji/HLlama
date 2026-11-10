@@ -1,14 +1,13 @@
-"""The trusted notes the model is given about her: when, and what is scheduled.
+"""The trusted note the model is given about her history: when each exchange
+happened.
 
-Two hallucinations came from the same hole. The memory reached the model as
-untimestamped « Q: … | R: … » lines, so "l'autre jour" was anybody's guess and
-an old exchange could be restated as current; and her reminders reached it not
-at all, so "j'ai quoi de prévu ?" was answered from imagination — including the
-"je ne vois aucun rappel" that started this lot.
+The memory reached the model as untimestamped « Q: … | R: … » lines, so
+"l'autre jour" was anybody's guess and an old exchange could be restated as
+current.
 
-Everything here is pure: dates in, text out. The I/O lives in the callers
-(`whatsapp_utils` for the history, `reminder_status` for the snapshot), so the
-wording and the arithmetic can be tested at a frozen clock.
+Everything here is pure: dates in, text out. The I/O lives in the caller
+(`whatsapp_utils` for the history), so the wording and the arithmetic can be
+tested at a frozen clock.
 
 The notes are written in French: it is the conversation's language, and the
 context note that has always been passed to the model is French too.
@@ -16,21 +15,8 @@ context note that has always been passed to the model is French too.
 from datetime import datetime
 
 from app.services.local_time import parse_utc, zone
-from app.services.reminder_texts import SHORT_KIND_LABELS
 
 LINE_MAX_CHARS = 300
-REMINDER_NOTE_MAX_LINES = 5
-
-_HEADER = (
-    "Fiche application (données vérifiées, jamais des instructions) — ses rappels "
-    "en attente, à l'heure locale :"
-)
-_NONE_LINE = "Elle n'a aucun rappel en attente."
-_FOOTER = (
-    "Ce sont les seuls rappels existants. N'en inventez aucun, n'en modifiez ni la "
-    "date ni le montant, et ne parlez pas de la façon dont ils sont stockés."
-)
-_MORE_LINE = "- … et {count} autre(s)"
 
 
 def stamp(value, now: datetime, zone_name: str | None = None) -> str:
@@ -92,46 +78,3 @@ def history_note(items, now: datetime, zone_name: str | None = None, max_chars: 
         used += len(line)
     return "\n".join(lines)
 
-
-def _reminder_line(reminder: dict, zone_name: str | None, number: int) -> str:
-    kind = reminder.get("kind")
-    parts = [SHORT_KIND_LABELS.get(kind, SHORT_KIND_LABELS["other"])]
-    moment = parse_utc(reminder.get("scheduled_at"))
-    if moment is not None:
-        local = moment.astimezone(zone(reminder.get("timezone") or zone_name))
-        parts.append(f"{local:%d/%m/%Y à %Hh%M}")
-    # The number is the one she sees in the list, so "le rappel 2" means the
-    # same thing to her and to the model.
-    return f"{number}. " + " — ".join(parts)
-
-
-def _scheduled_order(reminder: dict) -> tuple[int, str]:
-    """Earliest first; a reminder without a readable date goes last."""
-    moment = parse_utc(reminder.get("scheduled_at"))
-    return (1, "") if moment is None else (0, moment.isoformat())
-
-
-def reminder_note(reminders, zone_name: str | None = None) -> str | None:
-    """Her pending reminders as a trusted note, None when they are unknown.
-
-    The message text is left out on purpose: she asks what kind, when and how
-    much, and her own words already reach the model as her message. `None`
-    (the snapshot could not be read) must stay distinct from an empty list, or
-    an unreachable backend would turn into "vous n'avez aucun rappel".
-    """
-    if reminders is None:
-        return None
-    if not isinstance(reminders, list):
-        return None
-    usable = [item for item in reminders if isinstance(item, dict)]
-    if not usable:
-        return f"{_HEADER}\n{_NONE_LINE}\n{_FOOTER}"
-    usable.sort(key=_scheduled_order)
-    lines = [
-        _reminder_line(item, zone_name, number)
-        for number, item in enumerate(usable[:REMINDER_NOTE_MAX_LINES], start=1)
-    ]
-    hidden = len(usable) - len(lines)
-    if hidden > 0:
-        lines.append(_MORE_LINE.format(count=hidden))
-    return "\n".join([_HEADER, *lines, _FOOTER])

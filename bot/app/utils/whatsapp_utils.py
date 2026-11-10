@@ -36,28 +36,15 @@ from app.services.backend_client import backend_base_url, backend_headers
 from app.services.button_router import extract_button_id, route_button_reply
 from app.services.chat_state import (
     awaiting_her_answer,
-    consent_gated,
     emergency_offer,
     pending_place_category,
-    reminder_detail_pending,
-    reminder_detail_shown,
 )
-from app.services import consent_hold, intents, menu, pending_notices
+from app.services import consent_hold, intents, menu
 from app.services.model_failure import category_for_provider_error
-from app.services.feedback import consume_feedback_comment, schedule_feedback
-from app.services import health_fact_flow, knowledge, memory_notes, reminder_flow, reminder_update
+from app.services.feedback import consume_feedback_comment
+from app.services import health_fact_flow, knowledge, memory_notes
 from app.services.local_time import zone, zone_name_for_wa_id
 from app.services import health_facts
-from app.services.reminder_status import (
-    NO_DETAIL_TEXT,
-    extract_cancel_number,
-    forget_snapshot,
-    handle_cancel_one,
-    handle_list_request,
-    is_detail_request,
-    is_list_request,
-    snapshot,
-)
 from app.services.whatsapp_api import (
     get_text_message_input,
     send_message,
@@ -939,23 +926,8 @@ def generate_response(
     return generate_structured_response(
         client, deployment_name, user_input, load_text_from_file(file_path),
         build_current_time_note(wa_id), context=context, preferred_name=preferred_name,
-        notes=(
-            build_reminder_notes(wa_id)
-            + build_knowledge_notes(user_input)
-            + build_health_fact_notes(wa_id)
-        ),
+        notes=build_knowledge_notes(user_input) + build_health_fact_notes(wa_id),
     )
-
-
-def build_reminder_notes(wa_id: str) -> tuple[str, ...]:
-    """The trusted notes about her own reminders, empty when they are unknown.
-
-    Without this the model held no reminder data at all and answered "j'ai quoi
-    de pr�vu ?" from imagination. An unreachable backend yields no note rather
-    than a note claiming she has none.
-    """
-    note = memory_notes.reminder_note(snapshot(wa_id), zone_name_for_wa_id(wa_id))
-    return (note,) if note else ()
 
 
 def build_health_fact_notes(wa_id: str) -> tuple[str, ...]:
@@ -988,9 +960,8 @@ def build_current_time_note(wa_id: str = "") -> str:
         "IMPORTANT: The current real date and time is "
         f"{now_local.strftime('%Y-%m-%dT%H:%M:%S')} in the user's local timezone "
         f"({zone_name}). The user speaks in their local time. "
-        "Always compute scheduled_at relative to this exact local date and time, "
-        "never from your own training data. Output scheduled_at as a naive "
-        "YYYY-MM-DDTHH:MM:SS value in the user's local timezone."
+        "Always reason about dates from this exact local date and time, "
+        "never from your own training data."
     )
 
 
@@ -1315,7 +1286,7 @@ def push_exchange_to_backend(wa_id, question, response=None, request_type=None):
 
     The user is identified by their deterministic `pseudo_id`; the raw
     `wa_id` is forwarded once so the backend can store the (encrypted)
-    number it needs for timezone resolution and reminder delivery.
+    number.
     """
     from app.utils.anonymity import pseudo_id_for
     pseudo_id = pseudo_id_for(wa_id)
@@ -1326,49 +1297,10 @@ def push_exchange_to_backend(wa_id, question, response=None, request_type=None):
         response = requests.post(url, json=payload, headers=_backend_headers(), timeout=10)
         if response.status_code >= 400:
             logging.error("push_exchange_to_backend failed: %s", response.status_code)
-        else:
-            schedule_feedback(wa_id)
         return response.status_code
     except requests.RequestException as e:
         logging.error("push_exchange_to_backend failed: %s", type(e).__name__)
         return None
-
-
-def cancel_pending_reminders_for_user(wa_id):
-    """Cancels all pending reminders of a user via the backend bot endpoint."""
-    from app.utils.anonymity import pseudo_id_for
-    pseudo_id = pseudo_id_for(wa_id)
-    base_url = os.getenv("NEAREST_API_URL", "")
-    url = f"{base_url}/api/bot/reminders/cancel-by-pseudo-id"
-    try:
-        response = requests.post(url, params={"pseudo_id": pseudo_id}, headers=_backend_headers(), timeout=10)
-        if response.status_code == 200:
-            body = response.json()
-            return body.get("data") if isinstance(body, dict) else []
-        logging.error("cancel_pending_reminders failed: %s", response.status_code)
-    except requests.RequestException as e:
-        logging.error("cancel_pending_reminders failed: %s", type(e).__name__)
-    return []
-
-
-_REMINDER_OPTOUTS = {
-    "stop",
-    "arret",
-    "arrêt",
-    "cancel",
-    "annule",
-    "annuler",
-    "stop rappels",
-    "annuler les rappels",
-    "arrete les rappels",
-    "arrête les rappels",
-}
-
-
-def is_reminder_optout(text):
-    """True when the user asks to cancel their scheduled reminders."""
-    cleaned = text.strip().strip(".,!?").lower()
-    return cleaned in _REMINDER_OPTOUTS
 
 
 def convert_date_to_text(date_obj, lang='en'):
@@ -1640,16 +1572,9 @@ def process_whatsapp_message(body: dict):
         gate_payload = consent_gate_payload(wa_id)
         if gate_payload:
             send_message(gate_payload)
-            consent_gated.set(pseudo_id_for(wa_id))
             if consent_hold.hold(wa_id, message, CONSENT_CONFIRMATION_REPLIES):
                 send_message(get_text_message_input(wa_id, consent_hold.KEPT_NOTICE))
             return
-    # First message since she accepted on the form: the confirmation queued by
-    # the backend goes out now, before anything else, instead of landing after
-    # the answer at the next reminder poll. The wa.me confirmation text gets its
-    # own reply in process_text_message.
-    if consent_gated.pop(pseudo_id_for(wa_id)) and not is_consent_confirmation_message:
-        pending_notices.deliver_now(wa_id, send_message)
     if consent_hold.supersedes(message, CONSENT_CONFIRMATION_REPLIES):
         consent_hold.discard(wa_id)
     else:
@@ -1664,12 +1589,6 @@ def process_whatsapp_message(body: dict):
 
     if route_button_reply(wa_id, extract_button_id(message), send_message):
         return
-
-    # She answered a discreet reminder: show its detail, then handle her
-    # message as usual.
-    for detail_payload in reminder_detail_pending.pop(pseudo_id_for(wa_id)) or []:
-        send_message(detail_payload)
-        reminder_detail_shown.set(pseudo_id_for(wa_id))
 
     if message_type == "button":
         # Template quick reply that is not a bot action: treat it as text.
@@ -1719,10 +1638,6 @@ def handle_request(wa_id, structured_json):
         handle_agent_action_request(wa_id, json_f)
     elif request_type == "location_request":
         handle_location_request(wa_id, json_f)
-    elif request_type == "reminder":
-        reminder_flow.start_from_structured(wa_id, json_f, send_message)
-    elif request_type == "reminder_update":
-        reminder_update.start_from_structured(wa_id, json_f, send_message)
     elif request_type == "health_fact":
         health_fact_flow.start_from_structured(wa_id, json_f, send_message)
     elif request_type == "helpline_request":
@@ -1779,9 +1694,7 @@ def send_menu(wa_id) -> None:
 
 def _accepts(text: str) -> bool:
     """Whether she accepted the offer of the nearest health service."""
-    from app.services.when_fr import normalize
-
-    answer = normalize(text or "").rstrip(" !.")
+    answer = intents.normalize(text or "")
     return answer in {
         "oui", "ok", "oui merci", "merci", "oui stp", "oui s il te plait",
         "trouve", "trouve le plus proche", "le plus proche", "oui trouve",
@@ -1822,57 +1735,12 @@ def process_text_message(wa_id, message):
     if intent and not answering and menu.act_on_intent(wa_id, intent, send_message):
         return None
 
-    # A reminder being prepared owns her next message: the date she types,
-    # or « annuler », which drops that draft and not her reminders.
-    if reminder_flow.consume_text(wa_id, raw_body, send_message):
-        return None
-
     # She was offered the nearest health service after the emergency numbers,
     # and she answered yes: the location is what finds it.
     if emergency_offer.pop(pseudo_id_for(wa_id)) and _accepts(raw_body):
         pending_place_category.set(wa_id, "hospital")
         send_message(send_location_request(wa_id))
         return None
-
-    # A reminder being moved owns her next message too: which one, and to when.
-    if reminder_update.consume_text(wa_id, raw_body, send_message):
-        return None
-
-    # "Quel est le message ?" after a discreet notice: the detail was just sent
-    # above, or there is none. Either way the model has nothing to say about it,
-    # and it used to answer with the out-of-scope redirect.
-    if is_detail_request(raw_body):
-        if reminder_detail_shown.pop(pseudo_id_for(wa_id)):
-            return None
-        send_message(get_text_message_input(wa_id, NO_DETAIL_TEXT))
-        push_exchange_to_backend(wa_id, raw_body, response=NO_DETAIL_TEXT, request_type="reminder")
-        return NO_DETAIL_TEXT
-
-    # A numbered cancellation ("annule le rappel 2") needs the last shown list
-    # and is served directly; "annule tout" stays the global opt-out below.
-    cancel_number = extract_cancel_number(raw_body)
-    if cancel_number is not None:
-        response_text = handle_cancel_one(wa_id, cancel_number, send_message)
-        push_exchange_to_backend(wa_id, raw_body, response=response_text, request_type="reminder")
-        return response_text
-
-    if is_reminder_optout(raw_body):
-        forget_snapshot(wa_id)
-        cancelled = cancel_pending_reminders_for_user(wa_id)
-        if cancelled:
-            response_text = "D'accord, j'ai annulé tous vos rappels programmés."
-        else:
-            response_text = "Vous n'avez aucun rappel programmé à annuler."
-        send_message(get_text_message_input(wa_id, response_text))
-        push_exchange_to_backend(wa_id, raw_body, response=response_text, request_type="reminder")
-        return response_text
-
-    # "Quels sont mes rappels ?" is answered from the real data, never guessed
-    # by the model: it hallucinated an empty list when it had no context.
-    if is_list_request(raw_body):
-        response_text = handle_list_request(wa_id, send_message)
-        push_exchange_to_backend(wa_id, raw_body, response=response_text, request_type="reminder")
-        return response_text
 
     if consume_feedback_comment(wa_id, raw_body, send_message):
         return None

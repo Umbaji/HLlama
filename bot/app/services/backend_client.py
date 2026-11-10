@@ -1,7 +1,7 @@
 """Thin HTTP client for the HLlama backend bot endpoints (X-Bot-Api-Key).
 
-Kept free of heavy imports so the reminder agent, the consent gate and the
-webhook helpers can be imported (and tested) without the speech stack.
+Kept free of heavy imports so the consent gate and the webhook helpers can be
+imported (and tested) without the speech stack.
 
 Users are identified by `pseudo_id`; the raw number only ever travels in a
 JSON body, never in a URL, and nothing here logs a payload.
@@ -50,7 +50,7 @@ def post_json(
     try:
         return requests.post(f"{base}{path}", **request_kwargs)
     except requests.RequestException as exc:
-        # Paths never carry PII (pseudo_id or reminder ids at most).
+        # Paths never carry PII (pseudo_id at most).
         logging.error("Backend call %s failed: %s", path, type(exc).__name__)
         return None
 

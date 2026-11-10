@@ -1,7 +1,7 @@
 """WhatsApp Cloud API sending helpers (payload builders + send).
 
-Lives outside `app.utils.whatsapp_utils` so that the reminder agent and the
-webhook routing can send messages without importing the speech stack.
+Lives outside `app.utils.whatsapp_utils` so that the webhook routing can send
+messages without importing the speech stack.
 Requires a Flask app context for the credentials.
 """
 import json
