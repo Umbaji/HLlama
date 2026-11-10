@@ -63,29 +63,29 @@ def client(db: Session) -> TestClient:
 
 class TestRecording:
     def test_a_wording_is_recorded(self, db: Session) -> None:
-        miss = record_miss(db, "reminder", "rappelle le #")
+        miss = record_miss(db, "translation", "traduis le #")
 
-        assert miss.service == "reminder"
-        assert miss.wording == "rappelle le #"
+        assert miss.service == "translation"
+        assert miss.wording == "traduis le #"
         assert miss.hits == 1
 
     def test_the_same_wording_is_counted(self, db: Session) -> None:
-        record_miss(db, "reminder", "rappelle le #")
-        miss = record_miss(db, "reminder", "rappelle le #")
+        record_miss(db, "translation", "traduis le #")
+        miss = record_miss(db, "translation", "traduis le #")
 
         assert miss.hits == 2
         assert len(db.execute(select(ServiceMissModel)).scalars().all()) == 1
 
     def test_an_empty_wording_is_refused(self, db: Session) -> None:
         with pytest.raises(ValueError):
-            record_miss(db, "reminder", "   ")
+            record_miss(db, "translation", "   ")
 
 
 class TestRoutes:
     def test_the_bot_records_a_wording(self, client: TestClient) -> None:
         response = client.post(
             "/api/bot/service-misses",
-            json={"service": "reminder", "wording": "rappelle le #"},
+            json={"service": "translation", "wording": "traduis le #"},
         )
 
         assert response.status_code == 201
@@ -97,8 +97,8 @@ class TestRoutes:
         assert response.status_code == 422
 
     def test_the_admin_reads_the_wordings(self, client: TestClient) -> None:
-        client.post("/api/bot/service-misses", json={"service": "reminder", "wording": "a"})
-        client.post("/api/bot/service-misses", json={"service": "reminder", "wording": "a"})
+        client.post("/api/bot/service-misses", json={"service": "translation", "wording": "a"})
+        client.post("/api/bot/service-misses", json={"service": "translation", "wording": "a"})
 
         response = client.get("/api/service-misses")
 
@@ -108,7 +108,7 @@ class TestRoutes:
         assert data[0]["hits"] == 2
 
     def test_the_most_frequent_come_first(self, db: Session) -> None:
-        record_miss(db, "reminder", "once")
+        record_miss(db, "translation", "once")
         for _ in range(3):
             record_miss(db, "message", "often")
 

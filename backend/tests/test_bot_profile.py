@@ -159,12 +159,6 @@ def test_bot_auxiliary_routes_publish_typed_success_schemas() -> None:
         ("/api/bot/knowledge/search", "get", "200", "KnowledgeSearchResult"),
         ("/api/bot/users/{pseudo_id}/profile", "get", "200", "BotProfileResponse"),
         ("/api/bot/users/{pseudo_id}/profile", "put", "200", "BotProfileResponse"),
-        (
-            "/api/bot/feedback/schedule",
-            "post",
-            "200",
-            "FeedbackScheduleResponse",
-        ),
         ("/api/bot/feedback", "post", "201", "FeedbackResponse"),
     )
     for path, method, status, payload_schema in operations:

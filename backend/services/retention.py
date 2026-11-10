@@ -3,9 +3,9 @@
 The period runs from a woman's last exchange, not from each row's own date: a
 history stays whole for RETENTION_MONTHS after her last message, then goes in
 one pass. Exchanges are anonymised (text emptied, row kept for statistics);
-feedback answers and finished reminders are deleted; the user row keeps only
-what the statistics need. Consent records and admin activity logs are never
-touched (legal decision, 2026-10-09).
+feedback answers are deleted; the user row keeps only what the statistics
+need. Consent records and admin activity logs are never touched (legal
+decision, 2026-10-09).
 
 Every operation is idempotent and works in bounded batches, so a pass that dies
 half way is finished by the next one.
@@ -23,13 +23,10 @@ from config import settings
 from database import SyncSession
 from models.feedback import FeedbackResponseModel
 from models.question import QuestionModel
-from models.reminder import ReminderModel
 from models.user import UserModel
 from monitoring import history
 
 logger = logging.getLogger(__name__)
-
-FINISHED_REMINDER_STATUSES = ("sent", "failed", "cancelled", "undelivered")
 
 
 def months_before(moment: datetime, months: int) -> datetime:
@@ -99,20 +96,6 @@ def delete_stale_feedback(db: Session, cutoff: datetime, is_dry_run: bool) -> in
     )
 
 
-def delete_stale_reminders(db: Session, cutoff: datetime, is_dry_run: bool) -> int:
-    stale = _stale_users(cutoff).with_only_columns(UserModel.pseudo_id)
-    ids = select(ReminderModel.id).where(
-        ReminderModel.pseudo_id.in_(stale),
-        ReminderModel.status.in_(FINISHED_REMINDER_STATUSES),
-    )
-    return _process(
-        db,
-        ids,
-        lambda batch: db.execute(delete(ReminderModel).where(ReminderModel.id.in_(batch))),
-        is_dry_run,
-    )
-
-
 def anonymise_stale_users(db: Session, cutoff: datetime, is_dry_run: bool) -> int:
     """Clears the number and the names; keeps the row, its pseudo_id and the
     statistics fields so consent records and counts stay attached."""
@@ -144,7 +127,6 @@ def run_sweep(db: Session, now: datetime, is_dry_run: bool) -> dict[str, int]:
     counts = {
         "exchanges_anonymised": anonymise_stale_exchanges(db, cutoff, is_dry_run),
         "feedback_deleted": delete_stale_feedback(db, cutoff, is_dry_run),
-        "reminders_deleted": delete_stale_reminders(db, cutoff, is_dry_run),
         # Last: the steps above find their rows through the users.
         "users_anonymised": anonymise_stale_users(db, cutoff, is_dry_run),
     }

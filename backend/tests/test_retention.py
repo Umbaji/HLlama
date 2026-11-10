@@ -15,7 +15,6 @@ from database import Base
 from models.consent import ConsentRecordModel
 from models.feedback import FeedbackResponseModel
 from models.question import QuestionModel
-from models.reminder import ReminderModel
 from models.user import UserModel
 from services import retention
 from services.retention import months_before, run_sweep
@@ -57,8 +56,6 @@ def _woman(db: Session, last_exchange: datetime, **fields) -> UserModel:
     db.add(user)
     db.add(QuestionModel(user_id=user.id, question="Ma question", response="Réponse", request_type="chat", created_at=last_exchange))
     db.add(FeedbackResponseModel(pseudo_id=user.pseudo_id, question_key="satisfaction", rating=5))
-    db.add(ReminderModel(pseudo_id=user.pseudo_id, message="Rappel", scheduled_at=last_exchange, status="sent"))
-    db.add(ReminderModel(pseudo_id=user.pseudo_id, message="Rappel à venir", scheduled_at=last_exchange, status="pending"))
     db.add(ConsentRecordModel(pseudo_id=user.pseudo_id, decision="accepted", recorded_at=last_exchange))
     db.commit()
     return user
@@ -110,14 +107,13 @@ def test_anonymisation_empties_the_text_and_keeps_the_row(db: Session) -> None:
     assert (stale.pseudo_id is not None, stale.age) == (True, 30)
 
 
-def test_feedback_and_finished_reminders_go_consent_stays(db: Session) -> None:
+def test_feedback_goes_consent_stays(db: Session) -> None:
     stale = _woman(db, CUTOFF - timedelta(days=1))
 
     counts = run_sweep(db, NOW, is_dry_run=False)
 
-    assert (counts["feedback_deleted"], counts["reminders_deleted"]) == (1, 1)
+    assert counts["feedback_deleted"] == 1
     assert _count(db, FeedbackResponseModel, stale.pseudo_id) == 0
-    assert [r.status for r in db.scalars(select(ReminderModel).where(ReminderModel.pseudo_id == stale.pseudo_id))] == ["pending"]
     assert _count(db, ConsentRecordModel, stale.pseudo_id) == 1
 
 
@@ -135,7 +131,7 @@ def test_a_dry_run_counts_without_changing_anything(db: Session) -> None:
 
     counts = run_sweep(db, NOW, is_dry_run=True)
 
-    assert counts == {"exchanges_anonymised": 1, "feedback_deleted": 1, "reminders_deleted": 1, "users_anonymised": 1}
+    assert counts == {"exchanges_anonymised": 1, "feedback_deleted": 1, "users_anonymised": 1}
     assert _questions(db, stale)[0].question == "Ma question"
 
 
@@ -148,7 +144,6 @@ def test_a_second_pass_changes_nothing(db: Session) -> None:
     assert counts == {
         "exchanges_anonymised": 0,
         "feedback_deleted": 0,
-        "reminders_deleted": 0,
         "users_anonymised": 0,
         "monitoring_purged": 0,
     }

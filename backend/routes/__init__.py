@@ -7,7 +7,6 @@ from routes.health import router as health_router
 from routes.stats import router as stats_router
 from routes.management import router as management_router
 from routes.bot import router as bot_router
-from routes.reminders import router as reminders_router
 from routes.monitoring import router as monitoring_router
 from routes.consent import router as consent_router
 from routes.knowledge import router as knowledge_router
@@ -24,7 +23,6 @@ __all__ = [
     "stats_router",
     "management_router",
     "bot_router",
-    "reminders_router",
     "monitoring_router",
     "consent_router",
     "knowledge_router",

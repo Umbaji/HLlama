@@ -1,5 +1,4 @@
 from collections.abc import Generator
-from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -10,12 +9,10 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from config import settings
 from database import Base, get_db
 from helpers.anonymity import pseudo_id_for
 from helpers.server_message import ServerMessageException, server_message
 from models.feedback import FeedbackResponseModel
-from models.reminder import ReminderModel
 from routes.bot import router as bot_router
 from routes.management import _require_admin
 from routes.management import router as management_router
@@ -25,7 +22,6 @@ from services.user_service import get_or_create_bot_user
 
 TEL = "+22890000100"
 PSEUDO = pseudo_id_for(TEL)
-BODY = {"pseudo_id": PSEUDO, "telnumber": TEL}
 
 
 @pytest.fixture()
@@ -69,95 +65,6 @@ def _consented_user(db: Session):
     user = get_or_create_bot_user(db, PSEUDO, TEL)
     record_consent(db, PSEUDO, "accepted")
     return user
-
-
-def _feedback_reminders(db: Session) -> list[ReminderModel]:
-    return list(db.execute(select(ReminderModel).where(ReminderModel.kind == "feedback")).scalars())
-
-
-def test_schedule_creates_feedback_reminder_after_delay(client: TestClient, db: Session) -> None:
-    _consented_user(db)
-    before = datetime.now(timezone.utc)
-
-    response = client.post("/api/bot/feedback/schedule", json=BODY)
-
-    assert response.status_code == 200
-    assert response.json()["data"] == {"scheduled": True}
-    [reminder] = _feedback_reminders(db)
-    delay = reminder.scheduled_at.replace(tzinfo=timezone.utc) - before
-    assert timedelta(minutes=settings.FEEDBACK_DELAY_MINUTES) <= delay < timedelta(
-        minutes=settings.FEEDBACK_DELAY_MINUTES + 1
-    )
-    assert reminder.status == "pending"
-
-
-def test_schedule_skips_when_one_is_pending(client: TestClient, db: Session) -> None:
-    _consented_user(db)
-    client.post("/api/bot/feedback/schedule", json=BODY)
-
-    response = client.post("/api/bot/feedback/schedule", json=BODY)
-
-    assert response.json()["data"] == {"scheduled": False}
-    assert len(_feedback_reminders(db)) == 1
-
-
-def test_schedule_respects_cooldown(client: TestClient, db: Session) -> None:
-    _consented_user(db)
-    db.add(
-        ReminderModel(
-            pseudo_id=PSEUDO,
-            kind="feedback",
-            message="m",
-            status="sent",
-            scheduled_at=datetime.now(timezone.utc) - timedelta(days=2),
-            sent_at=datetime.now(timezone.utc) - timedelta(days=2),
-        )
-    )
-    db.commit()
-
-    response = client.post("/api/bot/feedback/schedule", json=BODY)
-
-    assert response.json()["data"] == {"scheduled": False}
-
-
-def test_schedule_allowed_after_cooldown(client: TestClient, db: Session) -> None:
-    _consented_user(db)
-    old = datetime.now(timezone.utc) - timedelta(days=settings.FEEDBACK_COOLDOWN_DAYS + 1)
-    db.add(
-        ReminderModel(
-            pseudo_id=PSEUDO, kind="feedback", message="m", status="sent", scheduled_at=old, sent_at=old
-        )
-    )
-    db.commit()
-
-    response = client.post("/api/bot/feedback/schedule", json=BODY)
-
-    assert response.json()["data"] == {"scheduled": True}
-
-
-def test_schedule_needs_accepted_consent(client: TestClient, db: Session) -> None:
-    response = client.post("/api/bot/feedback/schedule", json=BODY)
-
-    assert response.json()["data"] == {"scheduled": False}
-    assert _feedback_reminders(db) == []
-
-
-def test_schedule_rejects_pseudo_id_mismatch(client: TestClient) -> None:
-    response = client.post(
-        "/api/bot/feedback/schedule", json={"pseudo_id": PSEUDO, "telnumber": "+22990000001"}
-    )
-
-    assert response.status_code == 400
-
-
-def test_schedule_blocked_for_deleted_user(client: TestClient, db: Session) -> None:
-    user = _consented_user(db)
-    user.deleted_at = datetime.now(timezone.utc)
-    db.commit()
-
-    response = client.post("/api/bot/feedback/schedule", json=BODY)
-
-    assert response.status_code == 403
 
 
 def test_record_feedback_rating_and_comment(client: TestClient, db: Session) -> None:

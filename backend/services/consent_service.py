@@ -188,7 +188,3 @@ def get_consent_status(db: Session, pseudo_id: str) -> str:
     """'accepted' | 'refused' | 'pending' (never answered)."""
     record = get_latest_consent(db, pseudo_id)
     return record.decision if record else "pending"
-
-
-def has_accepted_consent(db: Session, pseudo_id: str) -> bool:
-    return get_consent_status(db, pseudo_id) == "accepted"
