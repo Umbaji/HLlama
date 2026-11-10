@@ -3,8 +3,7 @@
 HLlama is a WhatsApp assistant for women's sexual and reproductive health, in
 Togo and Benin. A person writes to it on WhatsApp; it answers her health
 questions in French from a documentary base whose figures carry their source,
-sends her the reminders she asked for (a contraceptive injection, a prenatal
-visit, an appointment), and finds the nearest health service.
+and finds the nearest health service.
 
 It is built by [Umbaji](https://umbaji.org) and published under the MIT
 licence: local teams can take it, adapt its languages and its content, and run

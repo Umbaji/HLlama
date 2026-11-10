@@ -9,8 +9,8 @@
 
 **HLlama** is a multilingual WhatsApp assistant for women's health built by
 **Umbaji**. It runs on the WhatsApp Cloud API and delivers health information,
-translations (Ewe, Mina, Kabye, French), nearby healthcare place lookup and
-reminders (pills, DMPA-SC injections, appointments), in Togo and Benin.
+translations (Ewe, Mina, Kabye, French) and nearby healthcare place lookup, in
+Togo and Benin.
 
 ## What this repository holds
 
@@ -19,8 +19,8 @@ and a generic Helm chart under `<part>/deploy/`:
 
 | Directory | Description |
 | --- | --- |
-| `bot/` | Flask application implementing the WhatsApp webhook, the LLM personality, speech and the reminder scheduler |
-| `backend/` | FastAPI API: conversations, reminders, consent, health facts, the documentary base and feedback |
+| `bot/` | Flask application implementing the WhatsApp webhook, the LLM personality and speech |
+| `backend/` | FastAPI API: conversations, consent, health facts, the documentary base and feedback |
 | `admin/` | Next.js back office for the team: users, questions, documentary base, feedback, logs and settings |
 
 - `bot/README.md`, `backend/README.md`, `admin/README.md`: setup, environment

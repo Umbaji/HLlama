@@ -3,8 +3,8 @@
 Flask application implementing **HLlama**, the WhatsApp health assistant built by
 **Umbaji**. It receives messages through the Meta WhatsApp Cloud API webhook,
 generates replies with Azure OpenAI (using the HLlama personality), handles
-multilingual speech (Ewé, Mina, Kabyè), finds nearby healthcare places via the
-backend API, and runs a reminder scheduler.
+multilingual speech (Ewé, Mina, Kabyè) and finds nearby healthcare places via
+the backend API.
 
 ## Features
 
@@ -15,23 +15,11 @@ backend API, and runs a reminder scheduler.
   Mina and Kabyè. Responses are JSON-structured (`request_type`, `target_language`,
   `target_format`, `request_content`, `response`, …).
 - **Request types**: `question`, `translation`, `location_request` (nearby pharmacy /
-  hospital / clinic), `reminder`, `reminder_update`, `helpline_request`, `agent_action`,
-  `health_fact`.
-- **Reminders**: the LLM only spots the request and copies what it heard
-  (`reminder_kind`, `scheduled_at`, `repeat_interval_days`/`repeat_pattern`).
-  `app/services/reminder_flow.py` then asks for what is missing, parses the
-  date she types with `when_fr.py` ("demain a 20h", "le 25/10 a 8h", "dans 3 jours"),
-  shows a recap with Confirmer / Annuler, and creates the reminder only once she
-  confirms - so nothing is ever announced that was not created. A scheduler thread
-  polls `GET /api/bot/reminders/due` every 30s (atomic claim), then delivers each one:
-  free text or buttons inside the 24h window, otherwise the approved template of its
-  kind (`REMINDER_TEMPLATE_<KIND>`, see `docs/WHATSAPP_TEMPLATES.md`). No template
-  means `failed` / `no_template`.
+  hospital / clinic), `helpline_request`, `agent_action`, `health_fact`.
 - **Consent**: the gate fails closed, only an `accepted` status from the backend
   lets a user reach the assistant.
-- **Feedback**: after an exchange the bot asks the backend to plan a feedback
-  question (`/api/bot/feedback/schedule`); `FB:` button replies and the optional
-  comment are posted to `/api/bot/feedback`.
+- **Feedback**: `FB:` button replies and the optional comment are posted to
+  `/api/bot/feedback`.
 - **Health facts**: she can declare or retract a fact about her own health
   (`health_fact` / `health_fact_removed`), stored pseudonymously and fed back to the
   model as a trusted note.
@@ -98,24 +86,10 @@ TTS_PROVIDER="elevenlabs"
 ELEVENLABS_API_KEY="your_elevenlabs_api_key"
 ELEVENLABS_VOICE_ID="your_elevenlabs_voice_id"
 ELEVENLABS_MODEL_ID="eleven_flash_v2_5"
-
-# Reminders: one approved template per kind, used outside the 24h window
-REMINDER_TEMPLATE_LANG="fr"
-REMINDER_TEMPLATE_CYCLE="hllama_rappel_cycle"
-REMINDER_TEMPLATE_PILL="hllama_rappel_pilule"
-REMINDER_TEMPLATE_INJECTION="hllama_rappel_injection"
-REMINDER_TEMPLATE_APPOINTMENT="hllama_rappel_rdv"
-REMINDER_TEMPLATE_FEEDBACK="hllama_avis"
-REMINDER_TEMPLATE_NOTICE="hllama_notification"
-REMINDER_TEMPLATE_OTHER="hllama_rappel"
-REMINDER_DISCREET="true"
-REMINDER_SCHEDULER_ENABLED="true"
 ```
 
-> The exact template bodies, variables and buttons to submit to Meta are in
-> `docs/WHATSAPP_TEMPLATES.md`. `REMINDER_USE_TEMPLATE` and `REMINDER_TEMPLATE_NAME`
-> are no longer read. Also subscribe the Meta app to the `messages` webhook field
-> (it carries the `statuses` events used to flag undelivered reminders).
+> Subscribe the Meta app to the `messages` webhook field (it also carries the
+> `statuses` events, whose failures the bot logs).
 
 ### Running on an open model instead of Azure OpenAI
 
@@ -140,9 +114,7 @@ fine-tuned Llama ships with this repository today.
 python run.py
 ```
 
-The bot listens on `http://0.0.0.0:8000` (webhook at `/webhook`). The reminder
-scheduler thread starts when `run.py` is imported (so also under a WSGI server
-loading `run:app`), once per process; disable it with `REMINDER_SCHEDULER_ENABLED=false`.
+The bot listens on `http://0.0.0.0:8000` (webhook at `/webhook`).
 
 ## Tests
 
@@ -151,7 +123,7 @@ pip install -r requirements-test.txt
 AZURE_OPENAI_API_KEY=anything python -m unittest discover -s tests -p "test_*.py"
 ```
 
-284 tests, no network. Two things to know:
+154 tests, no network. Two things to know:
 
 - **`requirements-test.txt`, not `requirements.txt`.** The runtime set installs
   torch, whisper, speechbrain and gradio; no test imports any of them, which is
@@ -178,7 +150,7 @@ calls them in order.
 
 ```text
 bot/
-|-- run.py                          # Entry point: Flask app + reminder scheduler thread
+|-- run.py                          # Entry point: Flask app
 |-- bot_tester.py                   # Gradio chat simulator against the backend
 |-- wa_ks.py                        # One-off WhatsApp helper script
 |-- Dockerfile                      # python:3.12-slim + ffmpeg, speech models warmed at boot
@@ -188,22 +160,16 @@ bot/
 |   |-- __init__.py                 # Flask factory
 |   |-- config.py                   # Environment into app.config, logging
 |   |-- views.py                    # The webhook: verification, messages, statuses
-|   |-- reminder_agent.py           # Polls the backend every 30s, claims, sends,
-|   |                               #   reports. Owns the 24h window rule and the
-|   |                               #   template path outside it
 |   |
 |   |-- services/                   # Everything testable. No heavy imports.
-|   |   |-- whatsapp_api.py         #   Graph API send; text, button, list and
-|   |   |                           #   template payloads, with Meta's limits
+|   |   |-- whatsapp_api.py         #   Graph API send; text, button and list
+|   |   |                           #   payloads, with Meta's limits
 |   |   |-- backend_client.py       #   Backend base URL, bot key, JSON helpers
 |   |   |-- button_router.py        #   Routes MENU and button replies
 |   |   |-- menu.py                 #   The feature menu and what each entry does
 |   |   |-- consent_hold.py         #   Keeps the request the consent gate turns away
-|   |   |-- reminder_flow.py       #   Scheduling a reminder: slots, recap, confirm
-|   |   |-- reminder_texts.py      #   What that flow says to her
-|   |   |-- when_fr.py             #   The date she types, read without a clock
 |   |   |-- local_time.py          #   Her local "now", from her number
-|   |   |-- feedback.py             #   Satisfaction question, comment, scheduling
+|   |   |-- feedback.py             #   Satisfaction question and comment
 |   |   |-- emergency_contacts.py   #   Togolese emergency services
 |   |   |-- conversation_scope.py   #   What HLlama answers, and what it declines
 |   |   |-- conversation_response.py#   Shapes the model's answer for WhatsApp
@@ -213,10 +179,10 @@ bot/
 |   |   |-- circuit_breaker.py      #   Stops calling a service that keeps failing
 |   |   |-- preferred_name.py       #   The name she asked to be called
 |   |   |-- bot_profile.py          #   Profile sent to the backend
-|   |   |-- delivery_status.py      #   statuses webhook -> delivery-failed
+|   |   |-- delivery_status.py      #   statuses webhook -> failure logs
 |   |   |-- webhook_target.py       #   Ignores events for another phone number
 |   |   `-- chat_state.py           #   Per-replica TTL state: held request, pending
-|   |                               #     place, feedback, drafts
+|   |                               #     place, feedback, health fact drafts
 |   |
 |   |-- utils/
 |   |   |-- whatsapp_utils.py       #   The wiring: message dispatch, speech,
@@ -227,8 +193,8 @@ bot/
 |   |   `-- system_prompt.txt       #   HLlama's personality and output contract
 |   `-- decorators/security.py      # Meta signature verification
 |
-|-- tests/                          # 30 files, unittest, no network
-`-- docs/                           # Templates, safety, TTS, webhook isolation
+|-- tests/                          # 23 files, unittest, no network
+`-- docs/                           # Safety, TTS, webhook isolation
 ```
 
 ### Where to start reading
@@ -238,7 +204,6 @@ bot/
 | What happens to an incoming message | `app/views.py`, then `process_whatsapp_message` in `whatsapp_utils.py` |
 | Why the bot stays silent | `app/utils/consent_gate.py` |
 | What the menu offers | `app/services/menu.py` |
-| How a reminder leaves | `app/reminder_agent.py`, then `docs/WHATSAPP_TEMPLATES.md` |
 | What the model may answer | `app/utils/system_prompt.txt` and `services/structured_response.py` |
 
 ## How a message flows
@@ -249,10 +214,7 @@ bot/
 3. Text messages are sent to Azure OpenAI with the HLlama `system_prompt.txt` and
    recent memory; the model returns a structured JSON.
 4. The bot executes the request type: answer a question, translate + synthesize,
-   send a location request, or create a reminder in the backend.
-5. The scheduler delivers due reminders every 30 seconds (text inside the 24h
-   window, template of the kind outside it) and reports `sent` with the
-   `wa_message_id`, or `failed`.
+   send a location request, or record a health fact in the backend.
 
 ## Docker
 

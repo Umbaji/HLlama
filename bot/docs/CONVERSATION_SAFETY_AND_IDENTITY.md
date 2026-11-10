@@ -23,7 +23,7 @@ explicitly supplied preferred name without weakening pseudonymisation.
 - Sexual, reproductive, maternal, menstrual, mental, and general health information.
 - Prevention, symptoms, healthcare orientation, medication safety, nutrition, and hygiene.
 - Greetings, HLlama identity, and brief conversational transitions.
-- Health-related reminders, nearby healthcare locations, and supported translations.
+- Nearby healthcare locations and supported translations.
 - Safety situations, including violence or an immediate medical emergency.
 
 Unrelated politics, entertainment, coding, finance, general trivia, role-play, and any

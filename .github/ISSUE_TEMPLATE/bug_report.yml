@@ -43,7 +43,7 @@ body:
       label: How to reproduce it
       description: The steps, from the start. With the bot, `python bot_tester.py` reproduces a conversation without WhatsApp.
       placeholder: |
-        1. Send "rappelle-moi ma piqure dans 3 mois"
+        1. Send "je suis enceinte de 3 mois"
         2. Confirm the recap
         3. ...
     validations:
