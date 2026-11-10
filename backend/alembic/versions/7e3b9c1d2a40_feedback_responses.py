@@ -1,4 +1,4 @@
-"""reminders kind, claim lock, wa_message_id; feedback_responses
+"""feedback_responses
 
 Revision ID: 7e3b9c1d2a40
 Revises: 0d13de125418
@@ -17,12 +17,6 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column('reminders', sa.Column('kind', sa.String(length=20), nullable=False, server_default='other'))
-    op.add_column('reminders', sa.Column('locked_until', sa.DateTime(timezone=True), nullable=True))
-    op.add_column('reminders', sa.Column('wa_message_id', sa.String(length=128), nullable=True))
-    op.create_index('ix_reminders_wa_message_id', 'reminders', ['wa_message_id'])
-    op.create_index('ix_reminders_pseudo_id_kind', 'reminders', ['pseudo_id', 'kind'])
-
     op.create_table(
         'feedback_responses',
         sa.Column('id', sa.UUID(), primary_key=True),
@@ -42,12 +36,3 @@ def downgrade() -> None:
     op.drop_index('ix_feedback_responses_question_key', table_name='feedback_responses')
     op.drop_index('ix_feedback_responses_pseudo_id', table_name='feedback_responses')
     op.drop_table('feedback_responses')
-
-    op.drop_index('ix_reminders_pseudo_id_kind', table_name='reminders')
-    op.drop_index('ix_reminders_wa_message_id', table_name='reminders')
-    # Rows in the new statuses would otherwise be stuck after a downgrade.
-    op.execute("UPDATE reminders SET status = 'pending' WHERE status = 'sending'")
-    op.execute("UPDATE reminders SET status = 'sent' WHERE status = 'undelivered'")
-    op.drop_column('reminders', 'wa_message_id')
-    op.drop_column('reminders', 'locked_until')
-    op.drop_column('reminders', 'kind')
